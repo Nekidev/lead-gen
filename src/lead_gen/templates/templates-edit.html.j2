@@ -1,0 +1,36 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Edit email template / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+    </div>
+    <form class="container" method="post">
+      <input
+        name="name"
+        type="text"
+        placeholder="Template name, for your eyes only"
+        value="{{ template.name|forceescape }}"
+      />
+      <input
+        name="subject"
+        type="text"
+        placeholder="Subject"
+        required
+        value="{{ template.subject|forceescape }}"
+      />
+      <textarea
+        name="content"
+        placeholder="Hello {{ '{{name}}' }},&#10;&#10;I'm writing to tell you that..."
+        required
+      >{{ template.content }}</textarea>
+      <button type="submit" name="action" value="save">Save email template</button>
+      <button type="submit" name="action" value="delete">DELETE EMAIL TEMPLATE</button>
+    </form>
+  </form>
+  </div>
+  <script type="module" src="/static/js/textarea-autoresize.js"></script>
+{% endblock body %}

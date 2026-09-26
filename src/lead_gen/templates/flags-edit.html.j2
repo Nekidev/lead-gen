@@ -1,0 +1,33 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Edit {{ project.name }}'s custom flags / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+    </div>
+    <h1>Edit Custom Flags</h1>
+    <div class="card-list">
+      {% for flag in project.flags|sort(attribute="index") %}
+        <form
+          class="inline-input"
+          action="/projects/{{ project.id }}/flags/{{ flag.id }}"
+          method="post"
+        >
+          <input name="name" value="{{ flag.name|forceescape }}" type="text" required />
+          <input name="default" value="{{ flag.default|forceescape }}" type="text" />
+          <button name="action" value="save">Save</button>
+          <button name="action" value="delete">Delete</button>
+          <button name="action" value="move-up">↑</button>
+          <button name="action" value="move-down">↓</button>
+        </form>
+      {% endfor %}
+    </div>
+    <form action="/projects/{{ project.id }}/flags/create" method="post" class="inline-input">
+      <input type="text" name="name" placeholder="Flag name" />
+      <button type="submit">Create custom flag</button>
+    </form>
+  </div>
+{% endblock body %}

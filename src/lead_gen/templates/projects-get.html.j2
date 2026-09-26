@@ -1,0 +1,90 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Edit {{ project.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+    </div>
+    <h1>Project</h1>
+    <form method="post" class="container">
+      <input
+        type="text"
+        name="name"
+        placeholder="Project name"
+        value="{{ project.name|forceescape }}"
+      />
+      <button type="submit" name="action" value="save">Update project</button>
+      <button type="submit" name="action" value="delete">DELETE PROJECT</button>
+    </form>
+    <h2>Sequences</h2>
+    <div class="container">
+      <a href="/projects/{{ project.id }}/sequences/create">
+        <button>Create a sequence</button>
+      </a>
+    </div>
+    <h2>Leads</h2>
+    <form class="inline-input" action="/projects/{{ project.id }}/leads/import" method="post">
+      <input type="password" placeholder="Hunter API Key" name="hunter-api-key" required />
+      <button>Import leads from Hunter</button>
+    </form>
+    <a href="/projects/{{ project.id }}/flags">
+      <button>Edit custom flags</button>
+    </a>
+    <form action="/projects/{{ project.id }}/leads" method="post" class="container">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Company</th>
+              {% for flag in project.flags %}
+                <th>{{ flag.name }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for lead in project.leads %}
+              <tr>
+                <td>{{ loop.index }}.</td>
+                <td>
+                  <a
+                    href="mailto:{{ lead.person.email }}"
+                    target="_blank"
+                  >{{ lead.person.name }}</a>
+                </td>
+                <td>{{ lead.person.role }}</td>
+                <td>
+                  <a
+                    href="https://{{ lead.person.company.website }}"
+                    target="_blank"
+                  >{{ lead.person.company.name }}</a>
+                </td>
+                {% for flag in project.flags %}
+                  {% set values = lead.flags|selectattr("flag_id", "equalto", flag.id)|list %}
+                  {% if values|length > 0 %}
+                    {% set value = (values|first).value %}
+                  {% else %}
+                    {% set value = "" %}
+                  {% endif %}
+                  <td class="input">
+                    <input
+                      type="text"
+                      name="{{ lead.id }}-{{ flag.id }}"
+                      value="{{ value|forceescape }}"
+                      placeholder="{{ flag.default|forceescape }}"
+                    />
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="submit">Save lead flag values</button>
+    </form>
+  </div>
+{% endblock body %}

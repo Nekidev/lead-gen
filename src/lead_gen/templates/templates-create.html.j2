@@ -1,0 +1,24 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Create email template / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+    </div>
+    <h1>Create an Email Template</h1>
+    <form class="container" method="post">
+      <input name="name" placeholder="Template name, for your eyes only" type="text" required />
+      <input name="subject" type="text" placeholder="Subject" required />
+      <textarea
+        name="content"
+        placeholder="Hello {{ '{{name}}' }},&#10;&#10;I'm writing to tell you that..."
+        required
+      ></textarea>
+      <button type="submit">Create email template</button>
+    </form>
+  </div>
+  <script type="module" src="/static/js/textarea-autoresize.js"></script>
+{% endblock body %}

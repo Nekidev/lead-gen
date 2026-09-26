@@ -1,0 +1,15 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Create a Project / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+    </div>
+    <form class="container" method="post">
+      <input type="text" placeholder="Project name" name="name" required />
+      <button type="submit">Create project</button>
+    </form>
+  </div>
+{% endblock body %}

@@ -1,0 +1,7 @@
+{
+  "[jinja-html]": {
+    "djlint.enableLinting": false,
+    "djlint.profile": "jinja"
+  },
+  "djlint.singleAttributePerLine": true
+}

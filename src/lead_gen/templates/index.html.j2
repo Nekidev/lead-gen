@@ -1,0 +1,22 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Leader - Lead Generation Tooling</title>
+{% endblock %}
+{% block body %}
+  <article class="container">
+    <div class="card-grid">
+      {% for project in projects %}
+        <a href="/projects/{{ project.id }}">
+          <article class="card">
+            <header>
+              <div>{{ project.name }}</div>
+            </header>
+          </article>
+        </a>
+      {% endfor %}
+    </div>
+    <a href="/projects/create">
+      <button>Create a new project</button>
+    </a>
+  </div>
+{% endblock %}
