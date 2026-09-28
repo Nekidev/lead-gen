@@ -1,0 +1,76 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Edit step {{ step.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+    </div>
+    <div class="button-row">
+      <button disabled>Edit</button>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}/emails">
+        <button>Emails</button>
+      </a>
+    </div>
+    <h1>{{ step.name }}</h1>
+    <form
+      action="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}"
+      method="post"
+      class="container"
+    >
+      <div class="inline-input">
+        <span>Send after</span>
+        <input type="number" name="days" placeholder="12345" value="{{ step.days }}" />
+        <span>days</span>
+      </div>
+      <input
+        type="text"
+        name="name"
+        placeholder="Step name, for your eyes only"
+        required
+        value="{{ step.name|forceescape }}"
+      />
+      <input
+        type="text"
+        name="subject"
+        placeholder="Email subject, empty to reply to last email"
+        value="{{ step.subject|forceescape }}"
+        {% if subject_error %}
+          class="error"
+        {% endif %}
+      />
+      {% if subject_error %}
+        <div class="error">Email subject error: {{ subject_error }}</div>
+      {% endif %}
+      <textarea
+        name="content"
+        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+        required
+        {% if content_error %}
+          class="error"
+        {% endif %}
+      >{{step.content}}</textarea>
+      {% if content_error %}
+        <div class="error">Email content error: {{ content_error }}</div>
+      {% endif %}
+      <button name="action" value="save">Update sequence step</button>
+      <button name="action" value="delete">DELETE SEQUENCE STEP</button>
+    </form>
+    <div>
+      <p>You can use Jinja2 to customize your email for each prospect.</p>
+      <p>The following variables are available to you:</p>
+      <ol>
+        <li>lead.person_name</li>
+        <li>lead.person_role</li>
+        <li>lead.person_email</li>
+        <li>lead.company_name</li>
+        <li>lead.company_website</li>
+        <li>flags.* (e.g. flags.my_custom_flag)</li>
+      </ol>
+    </div>
+  </div>
+  <script src="/static/js/textarea-autoresize.js" type="module"></script>
+{% endblock body %}

@@ -1,0 +1,71 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Edit {{ step.name }} for {{ lead.person_name }} at {{ lead.company_name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}">
+        {{- step.name -}}
+      </a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}/emails">
+        Emails
+      </a>
+    </div>
+    <h1>Email to {{ lead.person_name }} at {{ lead.company_name }}</h1>
+    {% if email.error %}
+      <div class="error">
+        <span>Your email template has an error, so it cannot be processed. You can</span>
+        <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}">
+          fix it here.
+        </a>
+      </div>
+    {% else %}
+      <form method="post" class="container">
+        <input type="text" value="{{ email.subject|forceescape }}" name="subject">
+        <textarea name="content">{{ email.content }}</textarea>
+        <button name="action" value="save">Save changes</button>
+        {% if email.is_edited %}
+          <button name="action" value="delete">Reset to generated email</button>
+        {% endif %}
+      </form>
+      <script src="/static/js/textarea-autoresize.js"></script>
+    {% endif %}
+    <h2>About the Lead</h2>
+    <div class="table-container">
+      <table>
+        <tbody>
+          <tr>
+            <th>Name</th>
+            <td>{{ lead.person_name }}</td>
+          </tr>
+          <tr>
+            <th>Role</th>
+            <td>{{ lead.person_role }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ lead.person_email }}</td>
+          </tr>
+          <tr>
+            <th>Company</th>
+            <td>{{ lead.company_name }}</td>
+          </tr>
+          <tr>
+            <th>Website</th>
+            <td>{{ lead.company_website }}</td>
+          </tr>
+          {% for value in lead.flags %}
+            <tr>
+              <th>{{ value.flag.name }}</th>
+              <td>{{ value.value }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock body %}

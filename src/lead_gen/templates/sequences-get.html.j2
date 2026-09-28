@@ -1,1 +1,129 @@
 {% extends "base.html.j2" %}
+{% block header %}
+  <title>{{ sequence.name }} sequence / Leader</title>
+{% endblock header %}
+{% block body %}
+  <form method="post" id="update-meta">
+  </form>
+  <form method="post" id="update-schedule">
+  </form>
+  <form method="post" id="update-sending">
+  </form>
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+    </div>
+    <h1>{{ sequence.name }}</h1>
+    <div class="container">
+      <input
+        type="text"
+        value="{{ sequence.name|forceescape }}"
+        placeholder="Sequence name"
+        name="name"
+        form="update-meta"
+        required
+      />
+      <button name="action" value="save" form="update-meta">Update sequence</button>
+      <button name="action" value="delete" form="update-meta">DELETE SEQUENCE</button>
+    </div>
+    <h2>Steps</h2>
+    <div class="card-list">
+      {% for step in sequence.steps|sort(attribute="index") %}
+        <div class="card-with-actions">
+          <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}">
+            <article class="card">
+              <header>
+                <div>
+                  <span>{{ loop.index }}. {{ step.name }}</span>
+                  <span style="float:right;">Sent after {{ step.days }} days</span>
+                </div>
+              </header>
+            </article>
+          </a>
+          <form
+            class="actions"
+            action="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}"
+            method="post"
+          >
+            <button name="action" value="delete">X</button>
+            <button name="action" value="move-up">↑</button>
+            <button name="action" value="move-down">↓</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+    <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/create">
+      <button>Create step</button>
+    </a>
+    <h2>Schedule</h2>
+    <form method="post" class="container">
+      <div class="button-row">
+        {% for day in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] %}
+          <form method="post">
+            {% if day in sequence.send_days %}
+              <button
+                name="toggle-sending-day"
+                value="{{ day }}"
+                class="button-toggle on"
+              >{{ day|title }}</button>
+            {% else %}
+              <button
+                name="toggle-sending-day"
+                value="{{ day }}"
+                class="button-toggle off"
+              >{{ day|title }}</button>
+            {% endif %}
+          </form>
+        {% endfor %}
+      </div>
+      <div class="inline-input">
+        <span>From</span>
+        <input
+          type="time"
+          name="send-time-from"
+          form="update-schedule"
+          value="{{ sequence.send_time_from.hour|pad('0', 2) }}:{{ sequence.send_time_from.minute|pad('0', 2) }}"
+        />
+        <span>to</span>
+        <input
+          type="time"
+          name="send-time-to"
+          form="update-schedule"
+          value="{{ sequence.send_time_to.hour|pad('0', 2) }}:{{ sequence.send_time_to.minute|pad('0', 2) }}"
+        />
+      </div>
+      <button form="update-schedule">Save schedule</button>
+    </form>
+    <h2>Sending</h2>
+    <div>
+      Zoho Mail
+      <a href="/projects/{{project.id}}/sequences/{{sequence.id}}/connect/zoho">
+        <button style="float:right;">Connect</button>
+      </a>
+    </div>
+    <form method="post" class="container">
+      <div class="inline-input">
+        <span>Send up to</span>
+        <input
+          type="number"
+          name="email-daily-max"
+          form="update-sending"
+          value="{{ sequence.email_daily_max }}"
+        />
+        <span>emails per day</span>
+      </div>
+      <div class="inline-input">
+        <span>Send BCC to</span>
+        <input
+          type="email"
+          name="email-bcc"
+          form="update-sending"
+          value="{{ (sequence.email_bcc or '')|forceescape }}"
+        />
+      </div>
+      <button form="update-sending">Save email settings</button>
+      <button name="action" value="start" form="update-sending">START SEQUENCE!</button>
+    </form>
+  </div>
+{% endblock body %}

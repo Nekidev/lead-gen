@@ -19,31 +19,46 @@
       <button type="submit" name="action" value="delete">DELETE PROJECT</button>
     </form>
     <h2>Sequences</h2>
-    <div class="container">
-      <a href="/projects/{{ project.id }}/sequences/create">
-        <button>Create a sequence</button>
-      </a>
+    <div class="card-grid">
+      {% for sequence in project.sequences %}
+        <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">
+          <article class="card">
+            <header>
+              <div>{{ sequence.name }}</div>
+            </header>
+          </article>
+        </a>
+      {% endfor %}
     </div>
+    <a href="/projects/{{ project.id }}/sequences/create">
+      <button>Create a sequence</button>
+    </a>
     <h2>Leads</h2>
     <form class="inline-input" action="/projects/{{ project.id }}/leads/import" method="post">
       <input type="password" placeholder="Hunter API Key" name="hunter-api-key" required />
       <button>Import leads from Hunter</button>
     </form>
+    <a href="/projects/{{ project.id }}/leads/create">
+      <button>Create a lead</button>
+    </a>
     <a href="/projects/{{ project.id }}/flags">
       <button>Edit custom flags</button>
     </a>
-    <form action="/projects/{{ project.id }}/leads" method="post" class="container">
+    <form action="/projects/{{ project.id }}/leads" method="post" id="flags-form" class="hidden">
+    </form>
+    <div class="container">
       <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th></th>
+              <th>#</th>
               <th>Name</th>
               <th>Role</th>
               <th>Company</th>
               {% for flag in project.flags %}
                 <th>{{ flag.name }}</th>
               {% endfor %}
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -52,16 +67,16 @@
                 <td>{{ loop.index }}.</td>
                 <td>
                   <a
-                    href="mailto:{{ lead.person.email }}"
+                    href="mailto:{{ lead.person_email }}"
                     target="_blank"
-                  >{{ lead.person.name }}</a>
+                  >{{ lead.person_name }}</a>
                 </td>
-                <td>{{ lead.person.role }}</td>
+                <td>{{ lead.person_role }}</td>
                 <td>
                   <a
-                    href="https://{{ lead.person.company.website }}"
+                    href="https://{{ lead.company_website }}"
                     target="_blank"
-                  >{{ lead.person.company.name }}</a>
+                  >{{ lead.company_name }}</a>
                 </td>
                 {% for flag in project.flags %}
                   {% set values = lead.flags|selectattr("flag_id", "equalto", flag.id)|list %}
@@ -73,18 +88,29 @@
                   <td class="input">
                     <input
                       type="text"
-                      name="{{ lead.id }}-{{ flag.id }}"
+                      name="flag-{{ lead.id }}-{{ flag.id }}"
                       value="{{ value|forceescape }}"
                       placeholder="{{ flag.default|forceescape }}"
+                      form="flags-form"
                     />
                   </td>
                 {% endfor %}
+                <td>
+                  <div class="actions">
+                    <a href="/projects/{{ project.id }}/leads/{{ lead.id }}">
+                      <button>Edit</button>
+                    </a>
+                    <form action="/projects/{{ project.id }}/leads/{{ lead.id }}" method="post">
+                      <button name="action" value="delete">Delete</button>
+                    </form>
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       <button type="submit">Save lead flag values</button>
-    </form>
+    </div>
   </div>
 {% endblock body %}

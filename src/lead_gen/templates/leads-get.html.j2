@@ -1,0 +1,59 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Update lead {{ lead.name }} for {{ project.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+    </div>
+    <h1>{{ lead.person_name }}</h1>
+    <form action="/projects/{{ project.id }}/leads/{{ lead.id }}" method="post" class="container">
+      <div class="divider">Person</div>
+      <input
+        type="text"
+        placeholder="Person name"
+        name="person-name"
+        value="{{ lead.person_name|forceescape }}"
+      />
+      <input
+        type="email"
+        placeholder="Person email"
+        name="person-email"
+        value="{{ lead.person_email|forceescape }}"
+      />
+      <input
+        type="text"
+        placeholder="Person role"
+        name="person-role"
+        value="{{ lead.person_role|forceescape }}"
+      />
+      <div class="gap"></div>
+      <div class="divider">Company</div>
+      <input
+        type="text"
+        placeholder="Company name"
+        name="company-name"
+        value="{{ lead.company_name|forceescape }}"
+      />
+      <input
+        type="text"
+        placeholder="Company website, e.g. google.com"
+        name="company-website"
+        value="{{ lead.company_website|forceescape }}"
+      />
+      <div class="gap"></div>
+      <div class="divider">Flags</div>
+      {% for flag in project.flags %}
+        <input
+          type="text"
+          name="flag-{{ flag.id }}"
+          placeholder="{{ flag.name }} {% if flag.default %}(default: {{ flag.default }}){% endif %}"
+        />
+      {% endfor %}
+      <button name="action" value="save">Save lead</button>
+      <button name="action" value="delete">DELETE LEAD</button>
+    </form>
+  </div>
+{% endblock body %}

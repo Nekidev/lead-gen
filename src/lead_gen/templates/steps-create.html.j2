@@ -1,0 +1,46 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Create a step for {{ sequence.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+    </div>
+    <h1>Create a step</h1>
+    <form
+      action="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/create"
+      method="post"
+      class="container"
+    >
+      <div class="inline-input">
+        <span>Send after</span>
+        <input type="number" name="days" placeholder="12345" value="{{ default_days }}">
+        <span>days</span>
+      </div>
+      <input type="text" name="name" placeholder="Step name, for your eyes only" required />
+      <input type="text" name="subject" placeholder="Email subject, empty to reply to last email" />
+      <textarea
+        name="content"
+        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+        required
+      ></textarea>
+      <button>Create sequence step</button>
+    </form>
+    <div>
+      <p>You can use Jinja2 to customize your email for each prospect.</p>
+      <p>The following variables are available to you:</p>
+      <ol>
+        <li>lead.person_name</li>
+        <li>lead.person_role</li>
+        <li>lead.person_email</li>
+        <li>lead.company_name</li>
+        <li>lead.company_website</li>
+        <li>flags.* (e.g. flags.my_custom_flag)</li>
+      </ol>
+    </div>
+  </div>
+  <script src="/static/js/textarea-autoresize.js" type="module"></script>
+{% endblock body %}

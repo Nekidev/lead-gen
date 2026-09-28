@@ -1,0 +1,53 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Emails for {{ step.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+      <a
+        href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}"
+      >{{ step.name }}</a>
+    </div>
+    <div class="button-row">
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}">
+        <button>Edit</button>
+      </a>
+      <button disabled>Emails</button>
+    </div>
+    <h1>Emails for {{ step.name }}</h1>
+    <div class="container">
+      <div class="card-list">
+        {% for email in emails %}
+          <div class="card-with-actions">
+            <a
+              href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}/emails/{{ email.lead.id }}"
+            >
+              <article class="card">
+                <header>
+                  <div>
+                    <span>To {{ email.lead.person_name }} at {{ email.lead.company_name }}</span>
+                    <span style="float: right;">
+                      {% if email.exception %}
+                        Error.
+                      {% endif %}
+                      {% if email.is_edited %}
+                        Edited.
+                      {% endif %}
+                    </span>
+                  </div>
+                </header>
+              </article>
+            </a>
+            <div class="actions">
+              <button>X</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock body %}

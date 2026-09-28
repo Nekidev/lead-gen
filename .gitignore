@@ -13,3 +13,5 @@ wheels/
 .hunter-api-key.txt
 .openai-api-key.txt
 db.*
+
+.env

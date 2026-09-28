@@ -10,6 +10,7 @@ from lead_gen import website
 from lead_gen.website import env
 from lead_gen.database import CONFIG, Project
 from lead_gen.server.projects import router as projects_router
+from lead_gen.server.connections import router as connections_router
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ async def context(app: FastAPI):
 app = FastAPI(lifespan=context)
 
 app.include_router(projects_router)
+app.include_router(connections_router)
 
 
 @app.get("/")

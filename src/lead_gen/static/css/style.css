@@ -30,6 +30,10 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+}
+
 input,
 textarea,
 button {
@@ -49,6 +53,26 @@ a:has(> button) {
   padding: 0.5rem;
   height: 100%;
   box-sizing: border-box;
+}
+
+/* Container for a .card and an .actions element, actions inlined. */
+.card-with-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.card-with-actions .card,
+.card-with-actions a:has(> .card) {
+  flex: 1;
+}
+
+.card-with-actions .actions {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: stretch;
 }
 
 .card-grid {
@@ -95,13 +119,20 @@ a:has(> button) {
   min-width: 0;
 }
 
-table, th, td {
+table {
+  min-width: 100%;
+}
+
+table,
+th,
+td {
   border: 1px solid #bbb;
   border-collapse: collapse;
 }
 
-th, td {
-  padding: .5rem;
+th,
+td {
+  padding: 0.5rem;
   white-space: nowrap;
 }
 
@@ -120,12 +151,110 @@ td.input {
 
 td.input input {
   min-height: 100%;
+  min-width: 100%;
   background-color: transparent;
   border: none;
-  padding: .5rem;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+td:has(.actions) {
+  padding: 0px;
+}
+
+td .actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+td .actions :not(button) {
+  display: contents;
+}
+
+td .actions button {
+  min-height: 100%;
+  flex: 1;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  background-color: transparent;
+  border: none;
+  border-right: 1px dashed #bbb;
+}
+
+td .actions button:hover {
+  background-color: #ccc;
 }
 
 .table-container {
   overflow-x: auto;
   max-width: 100%;
+}
+
+textarea {
+  resize: none;
+}
+
+.button-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.button-row button {
+  flex: 1;
+}
+
+.button-row > form {
+  display: contents;
+}
+
+.divider {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.divider::before {
+  content: "";
+  border-top: 1px dashed #000;
+  width: 1rem;
+}
+
+.divider::after {
+  content: "";
+  border-top: 1px dashed #000;
+  flex: 1;
+}
+
+.hidden {
+  display: none;
+}
+
+.error:not(textarea, input) {
+  color: #d00;
+}
+
+textarea.error,
+input.error {
+  border: 1px solid #d00;
+  outline: 1px solid #d00;
+}
+
+.pre {
+  white-space: pre;
+}
+
+.prewrap {
+  white-space: pre-wrap;
+}
+
+.button-toggle.on {
+  opacity: 1;
+}
+
+.button-toggle.off {
+  opacity: 0.5;
 }
