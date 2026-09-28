@@ -23,6 +23,24 @@ CONFIG = {
 }
 
 
+class EmailAccount(Model):
+    id = fields.IntField(primary_key=True)
+
+    email = fields.CharField(max_length=128)
+    account_id = fields.CharField(max_length=128, unique=True)
+    token_type = fields.CharField(max_length=16)
+    access_token = fields.CharField(max_length=128)
+    access_token_expires_at = fields.DateTimeField()
+    refresh_token = fields.CharField(max_length=128)
+    accounts_server = fields.CharField(max_length=64)
+
+    emails: fields.BackwardFKRelation["Email"]
+    sequences: fields.ManyToManyRelation["Sequence"]
+
+    created_at = fields.DateTimeField(auto_now_add=True)
+    updated_at = fields.DateTimeField(auto_now=True)
+
+
 class Project(Model):
     id = fields.IntField(primary_key=True)
 
@@ -106,16 +124,11 @@ class Sequence(Model):
     send_time_to = fields.DateTimeField(
         db_default=datetime(year=1970, month=1, day=1, hour=16, tzinfo=timezone.utc)
     )
-    send_days = fields.JSONField[list[Day]](
-        db_default=[Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI]
-    )
+    send_days = fields.JSONField[list[Day]](db_default=[])
 
     email_daily_max = fields.IntField(db_default=10)
     email_bcc = fields.CharField(max_length=64, null=True)
-
-    zoho_access_token = fields.CharField(max_length=128, null=True)
-    zoho_refresh_token = fields.CharField(max_length=128, null=True)
-    zoho_email = fields.CharField(max_length=128, null=True)
+    email_accounts = fields.ManyToManyField(EmailAccount, related_name="sequences")
 
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
@@ -146,6 +159,9 @@ class Email(Model):
 
     step = fields.ForeignKeyField(Step, related_name="emails")
     lead = fields.ForeignKeyField(Lead, related_name="emails")
+    account = fields.ForeignKey(
+        EmailAccount, related_name="emails", null=True, on_delete=fields.SET_NULL
+    )
 
     subject = fields.CharField(max_length=128)
     content = fields.CharField(max_length=2048)
@@ -155,6 +171,15 @@ class Email(Model):
 
     class Meta:
         unique_together = [("step", "lead")]
+
+
+class SequenceSchedule(Model):
+    id = fields.IntField(primary_key=True)
+
+    step = fields.ForeignKeyField(Step, related_name="schedules", unique=True)
+
+    created_at = fields.DateTimeField(auto_now_add=True)
+    updated_at = fields.DateTimeField(auto_now=True)
 
 
 async def on_startup():

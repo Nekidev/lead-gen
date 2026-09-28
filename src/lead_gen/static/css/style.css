@@ -36,7 +36,8 @@ button:disabled {
 
 input,
 textarea,
-button {
+button,
+select {
   font-family: monospace;
   font-size: 1rem;
 }
@@ -114,7 +115,8 @@ a:has(> button) {
   gap: 0.5rem;
 }
 
-.inline-input input {
+.inline-input input,
+.inline-input select {
   flex: 1;
   min-width: 0;
 }

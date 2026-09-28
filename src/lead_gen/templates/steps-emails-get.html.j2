@@ -25,7 +25,12 @@
       </div>
     {% else %}
       <form method="post" class="container">
-        <input type="text" value="{{ email.subject|forceescape }}" name="subject">
+        <input
+          type="text"
+          value="{{ email.subject|forceescape }}"
+          name="subject"
+          placeholder="Email subject, leave it empty to reply to the last email"
+        />
         <textarea name="content">{{ email.content }}</textarea>
         <button name="action" value="save">Save changes</button>
         {% if email.is_edited %}

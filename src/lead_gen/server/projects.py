@@ -17,7 +17,17 @@ from tortoise.expressions import F
 
 from lead_gen import hunter, zoho
 from lead_gen.website import env
-from lead_gen.database import Project, Lead, Flag, FlagValue, Sequence, Step, Email, Day
+from lead_gen.database import (
+    Project,
+    Lead,
+    Flag,
+    FlagValue,
+    Sequence,
+    Step,
+    Email,
+    Day,
+    EmailAccount,
+)
 
 
 router = APIRouter()
@@ -342,10 +352,13 @@ async def handle_post_project_sequences_create(
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}")
 async def handle_get_project_sequence(project_id: int, sequence_id: int):
     project = await Project.get(id=project_id)
-    sequence = await Sequence.get(id=sequence_id, project=project).prefetch_related("steps")
+    sequence = await Sequence.get(id=sequence_id, project=project).prefetch_related(
+        "steps", "email_accounts"
+    )
+    accounts = await EmailAccount.all()
 
     page = env.get_template("sequences-get.html.j2")
-    response = HTMLResponse(page.render(project=project, sequence=sequence))
+    response = HTMLResponse(page.render(project=project, sequence=sequence, accounts=accounts))
     return response
 
 
@@ -354,9 +367,10 @@ class UpdateSequence(BaseModel):
     toggle_sending_day: Day | None = Field(None, alias="toggle-sending-day")
     send_time_from: str | None = Field(None, alias="send-time-from")
     send_time_to: str | None = Field(None, alias="send-time-to")
-    email_token: str | None = Field(None, alias="email-token")
     email_daily_max: int | None = Field(None, alias="email-daily-max")
     email_bcc: str | None = Field(None, alias="email-bcc")
+    add_account: int | str | None = Field(None, alias="add-account")
+    remove_account: int | str | None = Field(None, alias="remove-account")
     action: Literal["save", "delete"] = "save"
 
 
@@ -395,8 +409,12 @@ async def handle_post_project_sequence(
             sequence.email_bcc = form.email_bcc
         if form.email_daily_max is not None:
             sequence.email_daily_max = form.email_daily_max
-        if form.email_token is not None:
-            sequence.email_token = form.email_token
+        if form.add_account is not None:
+            account = await EmailAccount.get(id=form.add_account)
+            await sequence.email_accounts.add(account)
+        if form.remove_account is not None:
+            account = await EmailAccount.get(id=form.remove_account)
+            await sequence.email_accounts.remove(account)
 
         await sequence.save()
         return RedirectResponse(f"/projects/{project_id}/sequences/{sequence_id}", status_code=303)
@@ -409,8 +427,7 @@ async def handle_post_project_sequence(
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/connect/zoho")
 async def handle_get_project_sequence_connect_zoho(project_id: int, sequence_id: int):
     response = RedirectResponse(zoho.get_redirect_uri())
-    response.set_cookie("connect_project_id", project_id, expires=600)
-    response.set_cookie("connect_sequence_id", sequence_id, expires=600)
+    response.set_cookie("next", f"/projects/{project_id}/sequences/{sequence_id}", expires=900)
     return response
 
 

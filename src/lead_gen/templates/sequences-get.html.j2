@@ -96,13 +96,7 @@
       <button form="update-schedule">Save schedule</button>
     </form>
     <h2>Sending</h2>
-    <div>
-      Zoho Mail
-      <a href="/projects/{{project.id}}/sequences/{{sequence.id}}/connect/zoho">
-        <button style="float:right;">Connect</button>
-      </a>
-    </div>
-    <form method="post" class="container">
+    <div class="container">
       <div class="inline-input">
         <span>Send up to</span>
         <input
@@ -123,7 +117,47 @@
         />
       </div>
       <button form="update-sending">Save email settings</button>
+    </div>
+    <h2>Email Accounts</h2>
+    <div class="container">
+      <div class="card-list">
+        {% for account in sequence.email_accounts %}
+          <div class="card-with-actions">
+            <article class="card">
+              <header>
+                <div>{{ account.email }}</div>
+              </header>
+            </article>
+            <div class="actions">
+              <form method="post" style="display: contents;">
+                <button name="remove-account" value="{{ account.id }}">X</button>
+              </form>
+            </div>
+          </div>
+        {% else %}
+          No email accounts in use for this sequence
+        {% endfor %}
+      </div>
+      <form method="post" class="container">
+        <div class="inline-input">
+          <span>Add an account:</span>
+          <select name="add-account">
+            {% for account in accounts if account not in sequence.email_accounts %}
+              <option value="{{ account.id }}">{{ account.email }}</option>
+            {% else %}
+              <option disabled>No accounts to add</option>
+            {% endfor %}
+          </select>
+          <button>Add and save</button>
+        </div>
+      </form>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/connect/zoho">
+        <button>Connect Zoho Mail account</button>
+      </a>
+    </div>
+    <h2>Ready?</h2>
+    <div class="container">
       <button name="action" value="start" form="update-sending">START SEQUENCE!</button>
-    </form>
+    </div>
   </div>
 {% endblock body %}

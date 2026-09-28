@@ -46,6 +46,11 @@
               <button>X</button>
             </div>
           </div>
+        {% else %}
+          <div class="div">
+            You don't have any leads to send the email to yet.
+            <a href="/projects/{{ project.id }}">Add some leads here.</a>
+          </div>
         {% endfor %}
       </div>
     </div>
