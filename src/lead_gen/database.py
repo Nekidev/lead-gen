@@ -130,6 +130,10 @@ class Sequence(Model):
     email_bcc = fields.CharField(max_length=64, null=True)
     email_accounts = fields.ManyToManyField(EmailAccount, related_name="sequences")
 
+    queue_is_enabled = fields.BooleanField(db_default=False)
+    queue_emails_sent = fields.IntField(db_default=0)
+    queue_last_email_sent_at = fields.DateTimeField(null=True)
+
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
 
@@ -166,20 +170,16 @@ class Email(Model):
     subject = fields.CharField(max_length=128)
     content = fields.CharField(max_length=2048)
 
+    is_sent = fields.BooleanField(db_default=False)
+    is_priority = fields.BooleanField(db_default=False)
+    is_edited = fields.BooleanField(db_default=False)
+
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("step", "lead")]
-
-
-class SequenceSchedule(Model):
-    id = fields.IntField(primary_key=True)
-
-    step = fields.ForeignKeyField(Step, related_name="schedules", unique=True)
-
-    created_at = fields.DateTimeField(auto_now_add=True)
-    updated_at = fields.DateTimeField(auto_now=True)
+        indexes = [("step")]
 
 
 async def on_startup():
