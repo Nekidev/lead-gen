@@ -14,6 +14,17 @@
       <a href="/">Home</a>
       <a href="/projects/{{ project.id }}">{{ project.name }}</a>
     </div>
+    <div class="button-row">
+      <button disabled="disabled">Edit</button>
+      <button>Email Queue</button>
+    </div>
+    {% if sequence.is_enabled %}
+      <div class="card">
+        Your sequence is enabled. This means emails are currently scheduled to be sent and we're
+        waiting for replies from prospects. Due to that, most of the sequence cannot be edited. To
+        make changes, pause the sequence first.
+      </div>
+    {% endif %}
     <h1>{{ sequence.name }}</h1>
     <div class="container">
       <input
@@ -46,15 +57,33 @@
             action="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}"
             method="post"
           >
-            <button name="action" value="delete">X</button>
-            <button name="action" value="move-up">↑</button>
-            <button name="action" value="move-down">↓</button>
+            <button
+              name="action"
+              value="delete"
+              {% if sequence.is_enabled %}
+                disabled
+              {% endif %}
+            >X</button>
+            <button
+              name="action"
+              value="move-up"
+              {% if sequence.is_enabled %}
+                disabled
+              {% endif %}
+            >↑</button>
+            <button
+              name="action"
+              value="move-down"
+              {% if sequence.is_enabled %}
+                disabled
+              {% endif %}
+            >↓</button>
           </form>
         </div>
       {% endfor %}
     </div>
     <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/create">
-      <button>Create step</button>
+      <button {% if sequence.is_enabled %} disabled {% endif %}>Create step</button>
     </a>
     <h2>Schedule</h2>
     <form method="post" class="container">
@@ -66,12 +95,18 @@
                 name="toggle-sending-day"
                 value="{{ day }}"
                 class="button-toggle on"
+                {% if sequence.is_enabled %}
+                  type="button"
+                {% endif %}
               >{{ day|title }}</button>
             {% else %}
               <button
                 name="toggle-sending-day"
                 value="{{ day }}"
                 class="button-toggle off"
+                {% if sequence.is_enabled %}
+                  type="button"
+                {% endif %}
               >{{ day|title }}</button>
             {% endif %}
           </form>
@@ -84,6 +119,9 @@
           name="send-time-from"
           form="update-schedule"
           value="{{ sequence.send_time_from.hour|pad('0', 2) }}:{{ sequence.send_time_from.minute|pad('0', 2) }}"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
         />
         <span>to</span>
         <input
@@ -91,9 +129,17 @@
           name="send-time-to"
           form="update-schedule"
           value="{{ sequence.send_time_to.hour|pad('0', 2) }}:{{ sequence.send_time_to.minute|pad('0', 2) }}"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
         />
       </div>
-      <button form="update-schedule">Save schedule</button>
+      <button
+        form="update-schedule"
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
+      >Save schedule</button>
     </form>
     <h2>Sending</h2>
     <div class="container">
@@ -104,6 +150,9 @@
           name="email-daily-max"
           form="update-sending"
           value="{{ sequence.email_daily_max }}"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
         />
         <span>emails per day</span>
       </div>
@@ -114,9 +163,17 @@
           name="email-bcc"
           form="update-sending"
           value="{{ (sequence.email_bcc or '')|forceescape }}"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
         />
       </div>
-      <button form="update-sending">Save email settings</button>
+      <button
+        form="update-sending"
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
+      >Save email settings</button>
     </div>
     <h2>Email Accounts</h2>
     <div class="container">
@@ -130,7 +187,13 @@
             </article>
             <div class="actions">
               <form method="post" style="display: contents;">
-                <button name="remove-account" value="{{ account.id }}">X</button>
+                <button
+                  name="remove-account"
+                  value="{{ account.id }}"
+                  {% if sequence.is_enabled %}
+                    disabled
+                  {% endif %}
+                >X</button>
               </form>
             </div>
           </div>
@@ -141,24 +204,32 @@
       <form method="post" class="container">
         <div class="inline-input">
           <span>Add an account:</span>
-          <select name="add-account">
+          <select name="add-account" {% if sequence.is_enabled %} disabled {% endif %}>
             {% for account in accounts if account not in sequence.email_accounts %}
               <option value="{{ account.id }}">{{ account.email }}</option>
             {% else %}
               <option disabled>No accounts to add</option>
             {% endfor %}
           </select>
-          <button>Add and save</button>
+          <button {% if sequence.is_enabled %} disabled {% endif %}>Add and save</button>
         </div>
       </form>
       <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/connect/zoho">
         <button>Connect Zoho Mail account</button>
       </a>
     </div>
-    <h2>Ready?</h2>
-    <div class="container">
-      <div>Once a sequence is started, you cannot edit it. To edit it, you'll need to pause it.</div>
-      <button name="action" value="start" form="update-sending">START SEQUENCE!</button>
-    </div>
+    {% if sequence.is_enabled %}
+      <h2>Sending Status</h2>
+      <div class="container">
+        <div>This sequence is active and emails are being sent.</div>
+        <button name="is-enabled" value="false" form="update-sending">PAUSE SENDING</button>
+      </div>
+    {% else %}
+      <h2>Ready?</h2>
+      <div class="container">
+        <div>Once a sequence is started, you cannot edit it. To edit it, you'll need to pause it.</div>
+        <button name="is-enabled" value="true" form="update-sending">START SEQUENCE!</button>
+      </div>
+    {% endif %}
   </div>
 {% endblock body %}

@@ -30,11 +30,31 @@
           value="{{ email.subject|forceescape }}"
           name="subject"
           placeholder="Email subject, leave it empty to reply to the last email"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
         />
-        <textarea name="content">{{ email.content }}</textarea>
-        <button name="action" value="save">Save changes</button>
+        <textarea
+          name="content"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        >{{ email.content }}</textarea>
+        <button
+          name="action"
+          value="save"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        >Save changes</button>
         {% if email.is_edited %}
-          <button name="action" value="delete">Reset to generated email</button>
+          <button
+            name="action"
+            value="delete"
+            {% if sequence.is_enabled %}
+              disabled
+            {% endif %}
+          >Reset to generated email</button>
         {% endif %}
       </form>
       <script src="/static/js/textarea-autoresize.js"></script>

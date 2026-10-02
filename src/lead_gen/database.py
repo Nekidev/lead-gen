@@ -66,6 +66,8 @@ class Lead(Model):
     company_name = fields.CharField(max_length=64)
     company_website = fields.CharField(max_length=64)
 
+    emails: fields.BackwardFKRelation["Email"]
+
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
 
@@ -114,6 +116,7 @@ class Sequence(Model):
 
     name = fields.CharField(max_length=64)
     project = fields.ForeignKeyField(Project, related_name="sequences")
+    is_enabled = fields.BooleanField(db_default=False)
 
     steps: fields.BackwardFKRelation["Step"]
 
@@ -129,10 +132,6 @@ class Sequence(Model):
     email_daily_max = fields.IntField(db_default=10)
     email_bcc = fields.CharField(max_length=64, null=True)
     email_accounts = fields.ManyToManyField(EmailAccount, related_name="sequences")
-
-    queue_is_enabled = fields.BooleanField(db_default=False)
-    queue_emails_sent = fields.IntField(db_default=0)
-    queue_last_email_sent_at = fields.DateTimeField(null=True)
 
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
@@ -160,6 +159,11 @@ class Step(Model):
 
 class Email(Model):
     id = fields.IntField(primary_key=True)
+    message_id = fields.CharField(max_length=64, null=True, unique=True)
+    """The Zoho message ID of this email.
+    
+    It will always be set when `is_sent` is set to `True`.
+    """
 
     step = fields.ForeignKeyField(Step, related_name="emails")
     lead = fields.ForeignKeyField(Lead, related_name="emails")
@@ -173,6 +177,12 @@ class Email(Model):
     is_sent = fields.BooleanField(db_default=False)
     is_priority = fields.BooleanField(db_default=False)
     is_edited = fields.BooleanField(db_default=False)
+
+    schedule = fields.DateTimeField(null=True)
+    """The day and time this email is scheduled to be sent.
+    
+    Will always be set when the email has `is_sent == True`.
+    """
 
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)

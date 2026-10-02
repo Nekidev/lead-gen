@@ -1,21 +1,17 @@
 from typing import Annotated, Literal
 
-from datetime import datetime, timezone
-
-from dataclasses import dataclass
-
-from jinja2.sandbox import SandboxedEnvironment
-from jinja2.exceptions import SecurityError, TemplateError
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.exceptions import HTTPException
 
 from pydantic import BaseModel, Field
 
 from tortoise import transactions
 from tortoise.expressions import F
 
-from lead_gen import hunter, zoho
+from lead_gen import hunter, zoho, emails
 from lead_gen.website import env
 from lead_gen.database import (
     Project,
@@ -28,6 +24,7 @@ from lead_gen.database import (
     Day,
     EmailAccount,
 )
+from lead_gen.scheduling import Rules, Calendar
 
 
 router = APIRouter()
@@ -371,6 +368,7 @@ class UpdateSequence(BaseModel):
     email_bcc: str | None = Field(None, alias="email-bcc")
     add_account: int | str | None = Field(None, alias="add-account")
     remove_account: int | str | None = Field(None, alias="remove-account")
+    is_enabled: bool | None = Field(None, alias="is-enabled")
     action: Literal["save", "delete"] = "save"
 
 
@@ -386,6 +384,7 @@ async def handle_post_project_sequence(
 ):
     project = await Project.get(id=project_id)
     sequence = await Sequence.get(id=sequence_id, project=project)
+    is_enabled = sequence.is_enabled
 
     if form.action == "save":
         if form.name is not None:
@@ -415,8 +414,73 @@ async def handle_post_project_sequence(
         if form.remove_account is not None:
             account = await EmailAccount.get(id=form.remove_account)
             await sequence.email_accounts.remove(account)
+        if form.is_enabled is not None:
+            sequence.is_enabled = form.is_enabled
 
         await sequence.save()
+
+        if sequence.is_enabled and not is_enabled:
+            leads = await project.leads.all().prefetch_related("flags__flag")
+            steps = await sequence.steps.all().order_by("index")
+            accounts = await sequence.email_accounts.all()
+            await project.fetch_related("flags")
+
+            rules = Rules(
+                time_from=sequence.send_time_from.time(),
+                time_to=sequence.send_time_to.time(),
+                days=[
+                    {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}[day]
+                    for day in sequence.send_days
+                ],
+                daily_max=sequence.email_daily_max,
+            )
+            calendar = Calendar(rules)
+
+            for lead_i, lead in enumerate(leads):
+                first_email_id = None
+                first_email_account = None
+
+                for step in steps:
+                    email = await lead.emails.all().get_or_none(step=step)
+                    if email is not None and email.is_sent:
+                        if first_email_id is None:
+                            first_email_id = calendar.insert(None, email.schedule).id
+                        if first_email_account is None:
+                            first_email_account = accounts[lead_i % len(accounts)]
+                        continue
+
+                    email = emails.get_rendered_email(project, step, lead, email)
+
+                    if first_email_id is None:
+                        event = calendar.schedule(None)
+                        first_email_id = event.id
+                        first_email_account = accounts[lead_i % len(accounts)]
+                    else:
+                        event = calendar.schedule(
+                            None, after_id=first_email_id, after_time=timedelta(days=step.days)
+                        )
+
+                    await Email.update_or_create(
+                        step=step,
+                        lead=lead,
+                        defaults={
+                            "subject": email.subject,
+                            "content": email.content,
+                            "is_sent": email.is_sent,
+                            "is_edited": email.is_edited,
+                            "is_priority": email.is_priority,
+                            "schedule": event.dt,
+                            "account": first_email_account,
+                        },
+                    )
+
+        elif not sequence.is_enabled and is_enabled:
+            steps = await sequence.steps.all()
+
+            for step in steps:
+                await step.emails.filter(is_sent=False).update(schedule=None, account=None)
+                await step.emails.filter(is_sent=False, is_edited=False).delete()
+
         return RedirectResponse(f"/projects/{project_id}/sequences/{sequence_id}", status_code=303)
 
     else:
@@ -475,99 +539,18 @@ async def handle_post_project_sequence_steps_create(
     )
 
 
-def get_sandbox_environment():
-    env = SandboxedEnvironment(autoescape=False)
-    env.filters["split"] = str.split
-    return env
-
-
-def get_template_error(template: str, context: dict) -> str | None:
-    env = get_sandbox_environment()
-
-    try:
-        env.from_string(template).render(**context)
-    except (TemplateError, SecurityError, Exception) as e:
-        return e.message if hasattr(e, "message") else str(e)
-
-
-def get_template_context(project: Project, lead: Lead | None):
-    if lead is None:
-        return {
-            "lead": {
-                "person_name": "",
-                "person_role": "",
-                "person_email": "",
-                "company_name": "",
-                "company_website": "",
-                "flags": {flag.name: "" for flag in project.flags},
-            }
-        }
-
-    else:
-        return {
-            "lead": {
-                "person_name": lead.person_name,
-                "person_role": lead.person_role,
-                "person_email": lead.person_email,
-                "company_name": lead.company_name,
-                "company_website": lead.company_website,
-                "flags": {
-                    value.flag.name: value.value or value.flag.default for value in lead.flags
-                },
-            }
-        }
-
-
-@dataclass
-class RenderedEmail:
-    lead: Lead
-    error: str
-    subject: str | None
-    content: str | None
-    is_edited: bool
-
-
-def get_rendered_email(project: Project, step: Step, lead: Lead, email: Email | None):
-    if email is not None:
-        return RenderedEmail(
-            lead=lead,
-            subject=email.subject,
-            content=email.content,
-            error=None,
-            is_edited=True,  # When sending this is gonna have to take that into account.
-        )
-
-    else:
-        environment = get_sandbox_environment()
-        context = get_template_context(project, lead)
-
-        error = None
-        subject = None
-        content = None
-
-        try:
-            subject = environment.from_string(step.subject).render(**context)
-            content = environment.from_string(step.content).render(**context)
-        except (SecurityError, TemplateError) as e:
-            error = e.message
-
-        return RenderedEmail(
-            lead=lead,
-            subject=subject,
-            content=content,
-            error=error,
-            is_edited=False,
-        )
-
-
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/steps/{step_id:int}")
 async def handle_get_project_sequence_steps(project_id: int, sequence_id: int, step_id: int):
     project = await Project.get(id=project_id).prefetch_related("flags")
     sequence = await Sequence.get(id=sequence_id, project=project)
     step = await Step.get(id=step_id, sequence=sequence)
 
-    subject_error = get_template_error(step.subject, get_template_context(project, None))
-    content_error = get_template_error(step.content, get_template_context(project, None))
+    subject_error = emails.get_template_error(
+        step.subject, emails.get_template_context(project, None)
+    )
+    content_error = emails.get_template_error(
+        step.content, emails.get_template_context(project, None)
+    )
 
     page = env.get_template("steps-edit.html.j2")
     response = HTMLResponse(
@@ -677,14 +660,14 @@ async def handle_get_project_sequence_step_emails(project_id: int, sequence_id: 
     step = await Step.get(id=step_id, sequence=sequence).prefetch_related("emails")
 
     lead_to_email = {email.lead_id: email for email in step.emails}
-    emails = []
+    email_list = []
     for lead in project.leads:
         email = lead_to_email.get(lead.id)
-        emails.append(get_rendered_email(project, step, lead, email))
+        email_list.append(emails.get_rendered_email(project, step, lead, email))
 
     page = env.get_template("steps-emails.html.j2")
     response = HTMLResponse(
-        page.render(project=project, sequence=sequence, step=step, emails=emails)
+        page.render(project=project, sequence=sequence, step=step, emails=email_list)
     )
     return response
 
@@ -701,7 +684,7 @@ async def handle_get_project_sequence_step_emails_email(
     lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags__flag")
     email = await Email.get_or_none(step=step, lead=lead)
 
-    email = get_rendered_email(project, step, lead, email)
+    email = emails.get_rendered_email(project, step, lead, email)
 
     page = env.get_template("steps-emails-get.html.j2")
     response = HTMLResponse(
@@ -713,6 +696,7 @@ async def handle_get_project_sequence_step_emails_email(
 class UpdateEmail(BaseModel):
     subject: str | None = None
     content: str | None = None
+    is_priority: bool | None = None
     action: Literal["save", "delete"] = "save"
 
 
@@ -731,16 +715,33 @@ async def handle_post_project_sequence_step_emails_email(
     sequence = await Sequence.get(id=sequence_id, project=project)
     step = await Step.get(id=step_id, sequence=sequence)
     lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags__flag")
+    email = await Email.get_or_none(lead=lead, step=step)
 
     if form.action == "save":
-        await Email.update_or_create(
-            lead=lead,
-            step=step,
-            defaults={
-                "subject": form.subject,
-                "content": form.content,
-            },
-        )
+        if email is not None:
+            if email.is_sent:
+                raise HTTPException(409, "You cannot edit a sent email!")
+
+            if form.subject is not None:
+                email.subject = form.subject
+            if form.content is not None:
+                email.content = form.content
+            if form.is_priority is not None:
+                email.is_priority = form.is_priority
+
+            await email.save()
+
+        else:
+            rendered = emails.get_rendered_email(project, step, lead, None)
+
+            await Email.create(
+                step=step,
+                lead=lead,
+                subject=form.subject | rendered.subject,
+                content=form.content | rendered.content,
+                is_edited=True,
+                is_priority=form.is_priority or False,
+            )
 
     else:
         # Don't allow deleting already-sent emails.

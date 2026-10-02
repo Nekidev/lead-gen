@@ -23,7 +23,15 @@
     >
       <div class="inline-input">
         <span>Send after</span>
-        <input type="number" name="days" placeholder="12345" value="{{ step.days }}" />
+        <input
+          type="number"
+          name="days"
+          placeholder="12345"
+          value="{{ step.days }}"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        />
         <span>days</span>
       </div>
       <input
@@ -32,6 +40,9 @@
         placeholder="Step name, for your eyes only"
         required
         value="{{ step.name|forceescape }}"
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
       />
       <input
         type="text"
@@ -40,6 +51,9 @@
         value="{{ step.subject|forceescape }}"
         {% if subject_error %}
           class="error"
+        {% endif %}
+        {% if sequence.is_enabled %}
+          disabled
         {% endif %}
       />
       {% if subject_error %}
@@ -52,12 +66,27 @@
         {% if content_error %}
           class="error"
         {% endif %}
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
       >{{step.content}}</textarea>
       {% if content_error %}
         <div class="error">Email content error: {{ content_error }}</div>
       {% endif %}
-      <button name="action" value="save">Update sequence step</button>
-      <button name="action" value="delete">DELETE SEQUENCE STEP</button>
+      <button
+        name="action"
+        value="save"
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
+      >Update sequence step</button>
+      <button
+        name="action"
+        value="delete"
+        {% if sequence.is_enabled %}
+          disabled
+        {% endif %}
+      >DELETE SEQUENCE STEP</button>
     </form>
     <div>
       <p>You can use Jinja2 to customize your email for each prospect.</p>

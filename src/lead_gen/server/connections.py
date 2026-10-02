@@ -44,7 +44,7 @@ async def handle_oauth_zoho_callback(
                 "access_token": tokens["access_token"],
                 "access_token_expires_at": datetime.now(timezone.utc)
                 + timedelta(seconds=tokens["expires_in"]),
-                "refresh_token": tokens["expires_in"],
+                "refresh_token": tokens["refresh_token"],
                 "accounts_server": accounts_server,
             },
         )
