@@ -19,7 +19,7 @@
       <button type="submit" name="action" value="delete">DELETE PROJECT</button>
     </form>
     <h2>Sequences</h2>
-    <div class="card-grid">
+    <div class="card-list">
       {% for sequence in project.sequences %}
         <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">
           <article class="card">
