@@ -11,7 +11,7 @@ from tortoise.context import TortoiseContext
 from lead_gen import website
 from lead_gen.website import env
 from lead_gen.database import CONFIG, Project
-from lead_gen.server import sending
+from lead_gen.server import emailing
 from lead_gen.server.projects import router as projects_router
 from lead_gen.server.connections import router as connections_router
 
@@ -21,11 +21,13 @@ async def context(app: FastAPI):
     async with TortoiseContext() as ctx:
         await ctx.init(config=CONFIG, _enable_global_fallback=True)
 
-        sending_task = asyncio.create_task(sending.sending_task())
+        sending_task = asyncio.create_task(emailing.sending_task())
+        receiving_task = asyncio.create_task(emailing.receiving_task())
 
         yield
 
         sending_task.cancel("Server is shutting down.")
+        receiving_task.cancel("Server is shutting down.")
 
 
 app = FastAPI(lifespan=context)

@@ -24,26 +24,31 @@
         </a>
       </div>
     {% else %}
+      {% if email.is_sent %}
+        <div class="card">
+          This email was sent on {{ email.schedule.strftime("%c") }}. It cannot be edited.
+        </div>
+      {% endif %}
       <form method="post" class="container">
         <input
           type="text"
           value="{{ email.subject|forceescape }}"
           name="subject"
           placeholder="Email subject, leave it empty to reply to the last email"
-          {% if sequence.is_enabled %}
+          {% if sequence.is_enabled or email.is_sent %}
             disabled
           {% endif %}
         />
         <textarea
           name="content"
-          {% if sequence.is_enabled %}
+          {% if sequence.is_enabled or email.is_sent %}
             disabled
           {% endif %}
         >{{ email.content }}</textarea>
         <button
           name="action"
           value="save"
-          {% if sequence.is_enabled %}
+          {% if sequence.is_enabled or email.is_sent %}
             disabled
           {% endif %}
         >Save changes</button>
@@ -55,6 +60,9 @@
               disabled
             {% endif %}
           >Reset to generated email</button>
+        {% endif %}
+        {% if not email.is_sent %}
+          <button name="action" value="send">SEND NOW</button>
         {% endif %}
       </form>
       <script src="/static/js/textarea-autoresize.js"></script>

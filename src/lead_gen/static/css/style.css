@@ -95,7 +95,12 @@ a:has(> button) {
 .breadcrumbs {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.breadcrumbs a {
+  flex-shrink: 0;
 }
 
 .breadcrumbs a::after {
@@ -259,4 +264,13 @@ input.error {
 
 .button-toggle.off {
   opacity: 0.5;
+}
+
+.text-sm {
+  font-size: 90%;
+}
+
+.text-secondary {
+  /* color: #777; */
+  opacity: .5;
 }

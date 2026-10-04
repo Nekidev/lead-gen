@@ -1,0 +1,55 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Email queue for {{ sequence.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+    </div>
+    <div class="button-row">
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">
+        <button>Edit</button>
+      </a>
+      <button disabled>Email Queue</button>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/flows">
+        <button>Lead Flows</button>
+      </a>
+    </div>
+    <h1>Email Queue</h1>
+    {% if sequence.is_enabled %}
+      <div class="card-list">
+        {% for email in emails %}
+          <a
+            href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ email.step.id }}/emails/{{ email.lead.id }}"
+          >
+            <article class="card">
+              <header>
+                <div>
+                  <span>To {{ email.lead.person_name }} at {{ email.lead.company_name }}</span>
+                  <span style="float: right;">
+                    {% if email.exception %}
+                      Error.
+                    {% endif %}
+                    {% if email.is_edited %}
+                      Edited.
+                    {% endif %}
+                    {% if email.is_sent %}
+                      Sent.
+                    {% endif %}
+                  </span>
+                </div>
+                <div class="text-secondary">Scheduled for {{ email.schedule.strftime("%c") }}</div>
+                <div class="text-secondary">For step {{ email.step.index + 1 }}. {{ email.step.name }}</div>
+              </header>
+            </article>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card">This sequence is paused. Nothing is queued.</div>
+    {% endif %}
+  </div>
+{% endblock body %}

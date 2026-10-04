@@ -16,7 +16,12 @@
     </div>
     <div class="button-row">
       <button disabled="disabled">Edit</button>
-      <button>Email Queue</button>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/queue">
+        <button>Email Queue</button>
+      </a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/flows">
+        <button>Lead Flows</button>
+      </a>
     </div>
     {% if sequence.is_enabled %}
       <div class="card">
@@ -182,7 +187,7 @@
           <div class="card-with-actions">
             <article class="card">
               <header>
-                <div>{{ account.email }}</div>
+                <div>{{ account.name }} &lt;{{ account.email }}&gt;</div>
               </header>
             </article>
             <div class="actions">
@@ -206,7 +211,9 @@
           <span>Add an account:</span>
           <select name="add-account" {% if sequence.is_enabled %} disabled {% endif %}>
             {% for account in accounts if account not in sequence.email_accounts %}
-              <option value="{{ account.id }}">{{ account.email }}</option>
+              <option
+                value="{{ account.id }}"
+              >{{ account.name }} &lt;{{ account.email }}&gt;</option>
             {% else %}
               <option disabled>No accounts to add</option>
             {% endfor %}

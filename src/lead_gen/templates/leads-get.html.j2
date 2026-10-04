@@ -46,10 +46,17 @@
       <div class="gap"></div>
       <div class="divider">Flags</div>
       {% for flag in project.flags %}
+        {% set values = lead.flags|selectattr("flag_id", "equalto", flag.id)|list %}
+        {% if values|length > 0 %}
+          {% set value = (values|first).value %}
+        {% else %}
+          {% set value = "" %}
+        {% endif %}
         <input
           type="text"
           name="flag-{{ flag.id }}"
           placeholder="{{ flag.name }} {% if flag.default %}(default: {{ flag.default }}){% endif %}"
+          value="{{ value|forceescape }}"
         />
       {% endfor %}
       <button name="action" value="save">Save lead</button>

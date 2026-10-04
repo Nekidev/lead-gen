@@ -1,0 +1,90 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <title>Flow for {{ lead.person_name }} for {{ sequence.name }} / Leader</title>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="/">Home</a>
+      <a href="/projects/{{ project.id }}">{{ project.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}">{{ sequence.name }}</a>
+      <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/flows">Lead Flows</a>
+    </div>
+    <h1>Conversation With {{ lead.person_name }}</h1>
+    <div class="card-list">
+      {% for email in emails if email.is_sent %}
+        <article class="card">
+          <header>
+            <div class="text-sm text-secondary">
+              {% if email.kind == "incoming" %}
+                {{ lead.person_name }} sent
+              {% else %}
+                You sent
+              {% endif %}
+              on {{ email.schedule.strftime("%c") }}
+            </div>
+            <div>Subject: {{ email.subject }}</div>
+          </header>
+          <hr />
+          <div class="prewrap">{{ email.content }}</div>
+          {% if email.step_id %}
+            <hr />
+            <div>
+              <a
+                href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ email.step_id }}/emails/{{ lead.id }}"
+              >Go to email</a>
+            </div>
+          {% endif %}
+        </article>
+      {% else %}
+        <div class="card">No emails have been sent yet.</div>
+      {% endfor %}
+      {% if emails|selectattr("kind", "equalto", "incoming")|list|length > 0 %}
+        Since {{ lead.person_name }} replied, all subsequent scheduled automated emails were cancelled.
+      {% endif %}
+    </div>
+    <h3>Send an Email</h3>
+    <form method="post" class="container">
+      <input
+        type="text"
+        name="subject"
+        placeholder="Email subject, leave empty to reply to the last email"
+      />
+      <textarea
+        name="content"
+        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+      ></textarea>
+      <button type="submit">Send it!</button>
+      <div>Jinja2 templating still applies!</div>
+    </form>
+    <h2>Scheduled</h2>
+    {% for email in emails if not email.is_sent and email.schedule %}
+      <article class="card">
+        <header>
+          <div class="text-sm text-secondary">Planned for {{ email.schedule.strftime("%c") }}</div>
+          {% if email.subject %}
+            <div>Subject: {{ email.subject }}</div>
+          {% else %}
+            <div>Replying to last email</div>
+          {% endif %}
+        </header>
+        <hr />
+        <div class="prewrap">{{ email.content }}</div>
+        <hr />
+        <div class="text-sm text-secondary">
+          {% if email.is_cancelled %}
+            Cancelled ·
+          {% endif %}
+          {% if email.step_id %}
+            <a
+              href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ email.step_id }}/emails/{{ lead.id }}"
+            >Go to email</a>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="card">No emails are scheduled to be sent to {{ lead.person_name }}.</div>
+    {% endfor %}
+  </div>
+  <script src="/static/js/textarea-autoresize.js" type="module"></script>
+{% endblock body %}

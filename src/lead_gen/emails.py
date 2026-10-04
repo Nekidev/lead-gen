@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from dataclasses import dataclass
 
 from jinja2.sandbox import SandboxedEnvironment
@@ -30,11 +32,19 @@ def get_template_context(project: Project, lead: Lead | None):
                 "person_email": "",
                 "company_name": "",
                 "company_website": "",
-                "flags": {flag.name: "" for flag in project.flags},
-            }
+            },
+            "flags": {flag.name: flag.default for flag in project.flags},
         }
 
     else:
+        flags = {}
+        for flag in project.flags:
+            flags[flag.name] = flag.default
+            for value in lead.flags:
+                if value.flag_id == flag.id:
+                    if value.value:
+                        flags[flag.name] = value.value
+
         return {
             "lead": {
                 "person_name": lead.person_name,
@@ -42,34 +52,36 @@ def get_template_context(project: Project, lead: Lead | None):
                 "person_email": lead.person_email,
                 "company_name": lead.company_name,
                 "company_website": lead.company_website,
-                "flags": {
-                    value.flag.name: value.value or value.flag.default for value in lead.flags
-                },
-            }
+            },
+            "flags": flags,
         }
 
 
 @dataclass
 class RenderedEmail:
     lead: Lead
-    error: str
+    error: str | None
     subject: str | None
     content: str | None
+    schedule: datetime | None
     is_sent: bool
     is_edited: bool
     is_priority: bool
+    is_cancelled: bool
 
 
 def get_rendered_email(project: Project, step: Step, lead: Lead, email: Email | None):
     if email is not None:
         return RenderedEmail(
             lead=lead,
+            error=None,
             subject=email.subject,
             content=email.content,
-            error=None,
+            schedule=email.schedule,
             is_sent=email.is_sent,
             is_edited=email.is_edited,
             is_priority=email.is_priority,
+            is_cancelled=email.is_cancelled,
         )
 
     else:
@@ -81,18 +93,19 @@ def get_rendered_email(project: Project, step: Step, lead: Lead, email: Email | 
         content = None
 
         try:
-            subject = environment.from_string(step.subject).render(**context)
-            content = environment.from_string(step.content).render(**context)
+            subject = environment.from_string(step.subject).render(context)
+            content = environment.from_string(step.content).render(context)
         except (SecurityError, TemplateError) as e:
             error = e.message
 
         return RenderedEmail(
             lead=lead,
+            error=error,
             subject=subject,
             content=content,
-            error=error,
+            schedule=None,
             is_sent=False,
             is_edited=False,
-            is_priority=False
+            is_priority=False,
+            is_cancelled=False,
         )
-

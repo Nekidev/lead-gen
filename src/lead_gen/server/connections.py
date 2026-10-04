@@ -38,6 +38,7 @@ async def handle_oauth_zoho_callback(
         await EmailAccount.update_or_create(
             account_id=account["accountId"],
             defaults={
+                "name": account["displayName"],
                 "email": account["mailboxAddress"],
                 "account_id": account["accountId"],
                 "token_type": tokens["token_type"],

@@ -12,6 +12,7 @@ from tortoise import transactions
 from tortoise.expressions import F
 
 from lead_gen import hunter, zoho, emails
+from lead_gen.server import emailing
 from lead_gen.website import env
 from lead_gen.database import (
     Project,
@@ -21,6 +22,7 @@ from lead_gen.database import (
     Sequence,
     Step,
     Email,
+    EmailKind,
     Day,
     EmailAccount,
 )
@@ -188,7 +190,7 @@ async def handle_post_project_leads_create(
 @router.get("/projects/{project_id:int}/leads/{lead_id:int}")
 async def handle_get_project_lead(project_id: int, lead_id: int):
     project = await Project.get(id=project_id).prefetch_related("flags")
-    lead = await Lead.get(id=lead_id, project=project)
+    lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags")
 
     page = env.get_template("leads-get.html.j2")
     response = HTMLResponse(page.render(project=project, lead=lead))
@@ -440,6 +442,12 @@ async def handle_post_project_sequence(
                 first_email_id = None
                 first_email_account = None
 
+                has_replied = await lead.emails.filter(
+                    sequence=sequence, kind=EmailKind.INCOMING
+                ).exists()
+                if has_replied:
+                    continue
+
                 for step in steps:
                     email = await lead.emails.all().get_or_none(step=step)
                     if email is not None and email.is_sent:
@@ -463,12 +471,14 @@ async def handle_post_project_sequence(
                     await Email.update_or_create(
                         step=step,
                         lead=lead,
+                        sequence=sequence,
                         defaults={
                             "subject": email.subject,
                             "content": email.content,
                             "is_sent": email.is_sent,
                             "is_edited": email.is_edited,
                             "is_priority": email.is_priority,
+                            "is_cancelled": False,
                             "schedule": event.dt,
                             "account": first_email_account,
                         },
@@ -478,8 +488,12 @@ async def handle_post_project_sequence(
             steps = await sequence.steps.all()
 
             for step in steps:
-                await step.emails.filter(is_sent=False).update(schedule=None, account=None)
-                await step.emails.filter(is_sent=False, is_edited=False).delete()
+                await step.emails.filter(is_sent=False, kind=EmailKind.OUTGOING).update(
+                    schedule=None, account_id=None
+                )
+                await step.emails.filter(
+                    is_sent=False, is_edited=False, kind=EmailKind.OUTGOING
+                ).delete()
 
         return RedirectResponse(f"/projects/{project_id}/sequences/{sequence_id}", status_code=303)
 
@@ -497,7 +511,7 @@ async def handle_get_project_sequence_connect_zoho(project_id: int, sequence_id:
 
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/steps/create")
 async def handle_get_project_sequence_steps_create(project_id: int, sequence_id: int):
-    project = await Project.get(id=project_id)
+    project = await Project.get(id=project_id).prefetch_related("flags")
     sequence = await Sequence.get(id=sequence_id, project=project).prefetch_related("steps")
 
     default_days = len(sequence.steps) * 3
@@ -655,7 +669,7 @@ async def handle_post_project_sequence_steps(
 
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/steps/{step_id:int}/emails")
 async def handle_get_project_sequence_step_emails(project_id: int, sequence_id: int, step_id: int):
-    project = await Project.get(id=project_id).prefetch_related("leads__flags__flag")
+    project = await Project.get(id=project_id).prefetch_related("leads__flags__flag", "flags")
     sequence = await Sequence.get(id=sequence_id, project=project)
     step = await Step.get(id=step_id, sequence=sequence).prefetch_related("emails")
 
@@ -678,7 +692,7 @@ async def handle_get_project_sequence_step_emails(project_id: int, sequence_id: 
 async def handle_get_project_sequence_step_emails_email(
     project_id: int, sequence_id: int, step_id: int, lead_id: int
 ):
-    project = await Project.get(id=project_id)
+    project = await Project.get(id=project_id).prefetch_related("flags")
     sequence = await Sequence.get(id=sequence_id, project=project)
     step = await Step.get(id=step_id, sequence=sequence)
     lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags__flag")
@@ -697,7 +711,7 @@ class UpdateEmail(BaseModel):
     subject: str | None = None
     content: str | None = None
     is_priority: bool | None = None
-    action: Literal["save", "delete"] = "save"
+    action: Literal["save", "delete", "send"] = "save"
 
 
 @router.post(
@@ -711,7 +725,7 @@ async def handle_post_project_sequence_step_emails_email(
     lead_id: int,
     form: Annotated[UpdateEmail, Form()],
 ):
-    project = await Project.get(id=project_id)
+    project = await Project.get(id=project_id).prefetch_related("flags")
     sequence = await Sequence.get(id=sequence_id, project=project)
     step = await Step.get(id=step_id, sequence=sequence)
     lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags__flag")
@@ -737,17 +751,192 @@ async def handle_post_project_sequence_step_emails_email(
             await Email.create(
                 step=step,
                 lead=lead,
-                subject=form.subject | rendered.subject,
-                content=form.content | rendered.content,
+                sequence=sequence,
+                subject=form.subject or rendered.subject,
+                content=form.content or rendered.content,
                 is_edited=True,
                 is_priority=form.is_priority or False,
             )
 
-    else:
-        # Don't allow deleting already-sent emails.
-        await Email.filter(step=step, lead=lead).delete()
+    elif form.action == "delete":
+        if not email.is_sent:
+            await email.delete()
+
+    elif form.action == "send":
+        rendered = emails.get_rendered_email(project, step, lead, email)
+        if rendered.error is not None:
+            raise Exception(rendered.error)
+
+        account = None
+        if email is not None:
+            await email.fetch_related("account")
+            account = email.account
+        if account is None:
+            accounts = await sequence.email_accounts.all()
+            account = accounts[0]
+        await emailing.refresh(account)
+
+        reply_to_id = None
+        if rendered.subject.strip() == "":
+            last_email = (
+                await Email.filter(sequence=sequence, lead=lead, is_sent=True)
+                .order_by("-schedule")
+                .first()
+            )
+            if last_email is not None:
+                reply_to_id = last_email.message_id
+                rendered.subject = f"Re: {last_email.subject}"
+
+        sent = await zoho.send_email(
+            account.account_id,
+            account.access_token,
+            f"{account.name} <{account.email}>",
+            lead.person_email,
+            "",
+            sequence.email_bcc or "",
+            rendered.subject,
+            rendered.content,
+            reply_to_id,
+        )
+
+        if email is None:
+            await Email.create(
+                message_id=sent["messageId"],
+                step=step,
+                lead=lead,
+                account=account,
+                sequence=sequence,
+                subject=rendered.subject,
+                content=rendered.content,
+                is_sent=True,
+                is_edited=rendered.is_edited,
+                schedule=datetime.now(timezone.utc),
+            )
+        else:
+            email.account = account
+            email.subject = rendered.subject
+            email.content = rendered.content
+            email.is_sent = True
+            email.schedule = datetime.now(timezone.utc)
+            email.message_id = sent["messageId"]
+            await email.save()
 
     return RedirectResponse(
         f"/projects/{project_id}/sequences/{sequence_id}/steps/{step_id}/emails/{lead_id}",
+        status_code=303,
+    )
+
+
+@router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/queue")
+async def handle_get_project_sequence_queue(project_id: int, sequence_id: int):
+    project = await Project.get(id=project_id)
+    sequence = await Sequence.get(id=sequence_id, project=project)
+
+    if sequence.is_enabled:
+        emails = (
+            await Email.filter(step__sequence=sequence)
+            .order_by("schedule")
+            .prefetch_related("account", "lead", "step")
+        )
+    else:
+        emails = []
+
+    page = env.get_template("sequences-queue.html.j2")
+    response = HTMLResponse(page.render(project=project, sequence=sequence, emails=emails))
+    return response
+
+
+@router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/flows")
+async def handle_get_project_sequence_flows(project_id: int, sequence_id: int):
+    project = await Project.get(id=project_id).prefetch_related("leads__emails")
+    sequence = await Sequence.get(id=sequence_id, project=project)
+
+    page = env.get_template("sequences-flows.html.j2")
+    response = HTMLResponse(page.render(project=project, sequence=sequence, leads=project.leads))
+    return response
+
+
+@router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/flows/{lead_id:int}")
+async def handle_get_project_sequence_flow(project_id: int, sequence_id: int, lead_id: int):
+    project = await Project.get(id=project_id)
+    sequence = await Sequence.get(id=sequence_id, project=project)
+    lead = await Lead.get(project=project, id=lead_id)
+    emails = await Email.filter(lead=lead).order_by("schedule")
+
+    page = env.get_template("sequences-flows-get.html.j2")
+    response = HTMLResponse(
+        page.render(project=project, sequence=sequence, lead=lead, emails=emails)
+    )
+    return response
+
+
+class SendEmail(BaseModel):
+    subject: str
+    content: str
+
+
+@router.post("/projects/{project_id:int}/sequences/{sequence_id:int}/flows/{lead_id:int}")
+@transactions.atomic()
+async def handle_post_project_sequence_flow(
+    project_id: int, sequence_id: int, lead_id: int, data: Annotated[SendEmail, Form()]
+):
+    project = await Project.get(id=project_id).prefetch_related("flags")
+    sequence = await Sequence.get(id=sequence_id, project=project)
+    lead = await Lead.get(project=project, id=lead_id).prefetch_related("flags__flag")
+
+    sandbox = emails.get_sandbox_environment()
+    context = emails.get_template_context(project, lead)
+
+    subject = sandbox.from_string(data.subject).render(context).strip()
+    content = sandbox.from_string(data.content).render(context).strip()
+
+    reply_to_id = None
+    if subject == "":
+        last_email = (
+            await Email.filter(sequence=sequence, lead=lead, is_sent=True)
+            .order_by("-schedule")
+            .first()
+        )
+        if last_email is not None:
+            reply_to_id = last_email.message_id
+            subject = f"Re: {last_email.subject}"
+
+    first_email = await lead.emails.all().order_by("schedule").first()
+
+    account = None
+    if first_email is not None:
+        await first_email.fetch_related("account")
+        account = first_email.account
+    if account is None:
+        accounts = await sequence.email_accounts.all()
+        account = accounts[0]
+    await emailing.refresh(account)
+
+    sent = await zoho.send_email(
+        account.account_id,
+        account.access_token,
+        f"{account.name} <{account.email}>",
+        lead.person_email,
+        "",
+        sequence.email_bcc or "",
+        subject,
+        content,
+        reply_to_id,
+    )
+
+    await Email.create(
+        message_id=sent["messageId"],
+        lead=lead,
+        account=account,
+        sequence=sequence,
+        subject=subject,
+        content=content,
+        is_sent=True,
+        is_edited=True,
+        schedule=datetime.now(timezone.utc),
+    )
+
+    return RedirectResponse(
+        f"/projects/{project_id}/sequences/{sequence_id}/flows/{lead_id}",
         status_code=303,
     )

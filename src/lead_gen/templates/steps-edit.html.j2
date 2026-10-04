@@ -97,7 +97,9 @@
         <li>lead.person_email</li>
         <li>lead.company_name</li>
         <li>lead.company_website</li>
-        <li>flags.* (e.g. flags.my_custom_flag)</li>
+        {% for flag in project.flags %}
+          <li>flags.{{ flag.name }}</li>
+        {% endfor %}
       </ol>
     </div>
   </div>

@@ -1,6 +1,7 @@
 from tortoise import migrations
 from tortoise.migrations import operations as ops
 import datetime
+from lead_gen.database import EmailKind
 from orjson import loads
 from tortoise.fields.base import OnDelete
 from tortoise.fields.data import JSON_DUMPS
@@ -122,19 +123,23 @@ class Migration(migrations.Migration):
             name='Email',
             fields=[
                 ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
-                ('step', fields.ForeignKeyField('models.Step', source_field='step_id', db_constraint=True, to_field='id', related_name='emails', on_delete=OnDelete.CASCADE)),
+                ('message_id', fields.CharField(null=True, unique=True, max_length=64)),
+                ('sequence', fields.ForeignKeyField('models.Sequence', source_field='sequence_id', db_constraint=True, to_field='id', related_name='emails', on_delete=OnDelete.CASCADE)),
+                ('step', fields.ForeignKeyField('models.Step', source_field='step_id', null=True, db_constraint=True, to_field='id', related_name='emails', on_delete=OnDelete.CASCADE)),
                 ('lead', fields.ForeignKeyField('models.Lead', source_field='lead_id', db_constraint=True, to_field='id', related_name='emails', on_delete=OnDelete.CASCADE)),
                 ('account', fields.ForeignKeyField('models.EmailAccount', source_field='account_id', null=True, db_constraint=True, to_field='id', related_name='emails', on_delete=OnDelete.SET_NULL)),
+                ('kind', fields.CharEnumField(description='INCOMING: incoming\nOUTGOING: outgoing', db_default=EmailKind.OUTGOING, enum_type=EmailKind, max_length=8)),
                 ('subject', fields.CharField(max_length=128)),
                 ('content', fields.CharField(max_length=2048)),
                 ('is_sent', fields.BooleanField(db_default=False)),
-                ('is_priority', fields.BooleanField(db_default=False)),
                 ('is_edited', fields.BooleanField(db_default=False)),
+                ('is_priority', fields.BooleanField(db_default=False)),
+                ('is_cancelled', fields.BooleanField(db_default=False)),
                 ('schedule', fields.DatetimeField(null=True, auto_now=False, auto_now_add=False)),
                 ('created_at', fields.DatetimeField(auto_now=False, auto_now_add=True)),
                 ('updated_at', fields.DatetimeField(auto_now=True, auto_now_add=False)),
             ],
-            options={'table': 'email', 'app': 'models', 'unique_together': [('step', 'lead')], 'indexes': [Index(fields=['step'])], 'pk_attr': 'id'},
+            options={'table': 'email', 'app': 'models', 'unique_together': [('step', 'lead')], 'indexes': [Index(fields=['step', 'kind']), Index(fields=['kind', 'schedule', 'is_sent', 'is_cancelled'])], 'pk_attr': 'id'},
             bases=['Model'],
         ),
     ]

@@ -26,6 +26,7 @@ CONFIG = {
 class EmailAccount(Model):
     id = fields.IntField(primary_key=True)
 
+    name = fields.CharField(max_length=128)
     email = fields.CharField(max_length=128)
     account_id = fields.CharField(max_length=128, unique=True)
     token_type = fields.CharField(max_length=16)
@@ -157,6 +158,11 @@ class Step(Model):
         unique_together = [("sequence", "index"), ("sequence", "days")]
 
 
+class EmailKind(str, Enum):
+    INCOMING = "incoming"
+    OUTGOING = "outgoing"
+
+
 class Email(Model):
     id = fields.IntField(primary_key=True)
     message_id = fields.CharField(max_length=64, null=True, unique=True)
@@ -165,18 +171,26 @@ class Email(Model):
     It will always be set when `is_sent` is set to `True`.
     """
 
-    step = fields.ForeignKeyField(Step, related_name="emails")
+    sequence = fields.ForeignKeyField(Sequence, related_name="emails")
+    step = fields.ForeignKeyField(Step, related_name="emails", null=True)
     lead = fields.ForeignKeyField(Lead, related_name="emails")
     account = fields.ForeignKey(
         EmailAccount, related_name="emails", null=True, on_delete=fields.SET_NULL
     )
 
+    kind = fields.CharEnumField(EmailKind, db_default=EmailKind.OUTGOING)
+
     subject = fields.CharField(max_length=128)
     content = fields.CharField(max_length=2048)
 
     is_sent = fields.BooleanField(db_default=False)
-    is_priority = fields.BooleanField(db_default=False)
+    "Whether the email was sent."
     is_edited = fields.BooleanField(db_default=False)
+    "Whether the email's contents were edited or whether they were rendered directly from a template."
+    is_priority = fields.BooleanField(db_default=False)
+    "Whether the email's sending should be prioritized."
+    is_cancelled = fields.BooleanField(db_default=False)
+    "Whether the email's sending was cancelled (due to the prospect responding)."
 
     schedule = fields.DateTimeField(null=True)
     """The day and time this email is scheduled to be sent.
@@ -189,7 +203,7 @@ class Email(Model):
 
     class Meta:
         unique_together = [("step", "lead")]
-        indexes = [("step")]
+        indexes = [("step", "kind"), ("kind", "schedule", "is_sent", "is_cancelled")]
 
 
 async def on_startup():

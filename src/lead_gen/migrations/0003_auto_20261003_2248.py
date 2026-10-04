@@ -3,14 +3,14 @@ from tortoise.migrations import operations as ops
 from tortoise import fields
 
 class Migration(migrations.Migration):
-    dependencies = [('models', '0001_initial')]
+    dependencies = [('models', '0002_auto_20261003_2247')]
 
     initial = False
 
     operations = [
-        ops.AddField(
-            model_name='Email',
-            name='message_id',
-            field=fields.CharField(null=True, unique=True, max_length=64),
+        ops.AlterField(
+            model_name='EmailAccount',
+            name='name',
+            field=fields.CharField(max_length=128),
         ),
     ]

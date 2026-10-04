@@ -1,8 +1,12 @@
+import email
+from email.policy import default
+from email.message import EmailMessage
+
 from typing import TypedDict
 
-from httpx import AsyncClient
-
 from urllib.parse import quote
+
+from httpx import AsyncClient
 
 from lead_gen import settings
 
@@ -11,7 +15,7 @@ _client = AsyncClient()
 
 
 def get_redirect_uri() -> str:
-    return f"https://accounts.zoho.com/oauth/v2/auth?client_id={quote(settings.ZOHO_CLIENT_ID)}&response_type=code&redirect_uri={quote(settings.ZOHO_REDIRECT_URI)}&scope=ZohoMail.messages.ALL+ZohoMail.accounts.READ&access_type=offline"
+    return f"https://accounts.zoho.com/oauth/v2/auth?client_id={quote(settings.ZOHO_CLIENT_ID)}&response_type=code&redirect_uri={quote(settings.ZOHO_REDIRECT_URI)}&scope=ZohoMail.messages.ALL+ZohoMail.accounts.READ&access_type=offline&prompt=consent"
 
 
 class ZohoTokens(TypedDict):
@@ -40,8 +44,6 @@ async def get_tokens(
         },
     )
     response.raise_for_status()
-
-    print(response.json())
 
     return response.json()
 
@@ -88,7 +90,7 @@ async def get_accounts(access_token: str) -> list[ZohoAccount]:
     return response.json()["data"]
 
 
-class SentEmail(TypedDict):
+class ZohoSentEmail(TypedDict):
     subject: str
     content: str
     messageId: str
@@ -111,7 +113,7 @@ async def send_email(
     subject: str,
     content: str,
     reply_to_id: str | None = None,
-) -> SentEmail:
+) -> ZohoSentEmail:
     """Send an email.
 
     Args:
@@ -137,7 +139,6 @@ async def send_email(
     response = await _client.post(
         url,
         headers={
-            # TODO: Bearer? Zoho-oauthtoken?
             "Authorization": f"Bearer {account_token}",
         },
         json={
@@ -149,8 +150,76 @@ async def send_email(
             "content": content,
             "mailFormat": "plaintext",
             "askReceipt": "no",
+            "action": "reply" if reply_to_id is not None else None
+        },
+    )
+    if not response.is_success:
+        print(response.text)
+    response.raise_for_status()
+
+    return response.json()["data"]
+
+
+class ZohoEmail(TypedDict):
+    summary: str
+    sentDateInGMT: str
+    calendarType: int
+    subject: str
+    messageId: str
+    threadId: str | None
+    "May not be present if the email is not a reply. When set, this is the ID of the original message."
+    threadCount: str
+    "May not be present if the email is not a reply."
+    flagId: str
+    status: str
+    status2: str
+    priority: str
+    hasInline: str
+    toAddress: str
+    folderId: str
+    fromAddress: str
+    hasAttachment: str
+    size: str
+    sender: str
+    receivedTime: str
+
+
+async def get_emails(
+    account_id: str,
+    account_token: str,
+    start: int = 1,
+    limit: int = 200,
+    only_threaded: bool = True,
+) -> list[ZohoEmail]:
+    response = await _client.get(
+        f"https://mail.zoho.com/api/accounts/{account_id}/messages/view",
+        params={
+            "includeto": "true",
+            "start": start,
+            "limit": limit,
+            "threadedMails": str(only_threaded).lower(),
+        },
+        headers={
+            "Authorization": f"Bearer {account_token}",
         },
     )
     response.raise_for_status()
 
     return response.json()["data"]
+
+
+async def get_email(
+    account_id: str | int,
+    account_token: str,
+    message_id: str | int,
+) -> EmailMessage:
+    response = await _client.get(
+        f"https://mail.zoho.com/api/accounts/{account_id}/messages/{message_id}/originalmessage",
+        headers={"Authorization": f"Bearer {account_token}"},
+    )
+    response.raise_for_status()
+
+    content = response.json()["data"]["content"]
+    message = email.message_from_string(content, policy=default)
+
+    return message

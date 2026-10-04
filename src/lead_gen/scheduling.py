@@ -31,6 +31,12 @@ class Rules:
     "The max amount of emails to send per day."
 
     def get_soonest_allowed_datetime(self, dt: datetime) -> datetime:
+        if self.days == []:
+            self.days = list(range(7))
+        if self.time_to <= self.time_from:
+            self.time_from = time(9, 0)
+            self.time_to = time(16, 0)
+
         while True:
             if dt.weekday() not in self.days or dt.time() > self.time_to:
                 dt += timedelta(days=1)

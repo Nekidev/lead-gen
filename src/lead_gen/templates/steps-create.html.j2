@@ -17,7 +17,7 @@
     >
       <div class="inline-input">
         <span>Send after</span>
-        <input type="number" name="days" placeholder="12345" value="{{ default_days }}">
+        <input type="number" name="days" placeholder="12345" value="{{ default_days }}" />
         <span>days</span>
       </div>
       <input type="text" name="name" placeholder="Step name, for your eyes only" required />
@@ -38,7 +38,9 @@
         <li>lead.person_email</li>
         <li>lead.company_name</li>
         <li>lead.company_website</li>
-        <li>flags.* (e.g. flags.my_custom_flag)</li>
+        {% for flag in project.flags %}
+          <li>flags.{{ flag.name }}</li>
+        {% endfor %}
       </ol>
     </div>
   </div>
