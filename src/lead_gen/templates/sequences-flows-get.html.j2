@@ -45,15 +45,21 @@
     </div>
     <h3>Send an Email</h3>
     <form method="post" class="container">
-      <input
-        type="text"
-        name="subject"
-        placeholder="Email subject, leave empty to reply to the last email"
-      />
-      <textarea
-        name="content"
-        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
-      ></textarea>
+      <div class="highlighted-input">
+        <input
+          type="text"
+          name="subject"
+          placeholder="Email subject, leave empty to reply to the last email"
+        />
+        <pre></pre>
+      </div>
+      <div class="highlighted-input">
+        <textarea
+          name="content"
+          placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+        ></textarea>
+        <pre></pre>
+      </div>
       <button type="submit">Send it!</button>
       <div>Jinja2 templating still applies!</div>
     </form>
@@ -86,5 +92,6 @@
       <div class="card">No emails are scheduled to be sent to {{ lead.person_name }}.</div>
     {% endfor %}
   </div>
+  <script src="/static/js/highlight.js" type="module"></script>
   <script src="/static/js/textarea-autoresize.js" type="module"></script>
 {% endblock body %}

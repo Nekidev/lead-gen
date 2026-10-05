@@ -98,6 +98,23 @@ def get_rendered_email(project: Project, step: Step, lead: Lead, email: Email | 
         except (SecurityError, TemplateError) as e:
             error = e.message
 
+        if step.transform_dedent:
+            subject = subject.strip()
+
+            lines = []
+            for line in content.splitlines():
+                lines.append(line.strip())
+            content = "\n".join(lines)
+
+        if step.transform_deduplicate_blank_lines:
+            lines = []
+            for line in content.splitlines():
+                if len(lines) != 0:
+                    if lines[-1] == "" and line == "":
+                        continue
+                lines.append(line)
+            content = "\n".join(lines)
+
         return RenderedEmail(
             lead=lead,
             error=error,

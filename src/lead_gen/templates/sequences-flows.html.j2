@@ -19,17 +19,17 @@
       <button disabled>Lead Flows</button>
     </div>
     <h1>Lead Flows</h1>
-    {% for lead in leads %}
+    {% for (lead, emails) in leads %}
       <a href="/projects/{{ project.id }}/sequences/{{ sequence.id }}/flows/{{ lead.id }}">
         <article class="card">
           <header>
             <div>{{ lead.person_name }}, {{ lead.person_role }} at {{ lead.company_name }}</div>
             <div class="text-secondary">
-              {{ lead.emails|selectattr('kind', 'equalto', 'outgoing')|selectattr("is_sent")|list|length }} emails sent
+              {{ emails|selectattr('kind', 'equalto', 'outgoing')|selectattr("is_sent")|list|length }} emails sent
               &middot;
-              {{ lead.emails|selectattr('kind', 'equalto', 'incoming')|list|length }} emails received
+              {{ emails|selectattr('kind', 'equalto', 'incoming')|list|length }} emails received
               &middot;
-              {{ lead.emails|selectattr('kind', 'equalto', 'outgoing')|selectattr("is_sent", "equalto", False)|list|length }} emails scheduled
+              {{ emails|selectattr('kind', 'equalto', 'outgoing')|selectattr("is_sent", "equalto", False)|list|length }} emails scheduled
             </div>
           </header>
         </article>

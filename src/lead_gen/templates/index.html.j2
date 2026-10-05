@@ -4,6 +4,7 @@
 {% endblock %}
 {% block body %}
   <article class="container">
+    <h1>Your projects</h1>
     <div class="card-list">
       {% for project in projects %}
         <a href="/projects/{{ project.id }}">

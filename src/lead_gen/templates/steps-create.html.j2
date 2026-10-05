@@ -17,16 +17,58 @@
     >
       <div class="inline-input">
         <span>Send after</span>
-        <input type="number" name="days" placeholder="12345" value="{{ default_days }}" />
+        <input type="number" name="days" placeholder="12345" value="{{ step_index * 3 }}" />
         <span>days</span>
       </div>
-      <input type="text" name="name" placeholder="Step name, for your eyes only" required />
-      <input type="text" name="subject" placeholder="Email subject, empty to reply to last email" />
-      <textarea
-        name="content"
-        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+      <input
+        type="text"
+        name="name"
+        placeholder="Step name, for your eyes only"
         required
-      ></textarea>
+        autocomplete="off"
+      />
+      <div class="highlighted-input">
+        <input
+          type="text"
+          name="subject"
+          autocomplete="off"
+          {% if step_index == 0 %}
+            placeholder="Email subject"
+            required
+          {% else %}
+            placeholder="Email subject, empty to reply to last email"
+          {% endif %}
+        />
+        <pre></pre>
+      </div>
+      <div class="highlighted-input">
+        <textarea
+          name="content"
+          placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+          required
+        ></textarea>
+        <pre></pre>
+      </div>
+      <label class="pointer">
+        <input
+          type="checkbox"
+          name="transform-dedent"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        />
+        Dedent (remove leading whitespaces)
+      </label>
+      <label class="pointer">
+        <input
+          type="checkbox"
+          name="transform-deduplicate-blank-lines"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        />
+        Remove double blank lines
+      </label>
       <button>Create sequence step</button>
     </form>
     <div>
@@ -44,5 +86,6 @@
       </ol>
     </div>
   </div>
+  <script src="/static/js/highlight.js" type="module"></script>
   <script src="/static/js/textarea-autoresize.js" type="module"></script>
 {% endblock body %}

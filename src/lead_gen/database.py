@@ -149,6 +149,9 @@ class Step(Model):
     subject = fields.TextField()
     content = fields.TextField()
 
+    transform_dedent = fields.BooleanField(db_default=False)
+    transform_deduplicate_blank_lines = fields.BooleanField(db_default=False)
+
     emails: fields.BackwardFKRelation["Email"]
 
     created_at = fields.DateTimeField(auto_now_add=True)

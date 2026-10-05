@@ -272,5 +272,66 @@ input.error {
 
 .text-secondary {
   /* color: #777; */
-  opacity: .5;
+  opacity: 0.5;
+}
+
+.pointer:not(:has(:disabled)) {
+  cursor: pointer;
+}
+
+label:has(input:disabled) {
+  opacity: 0.5;
+}
+
+.highlighted-input {
+  position: relative;
+}
+
+.highlighted-input:has(:disabled) pre {
+  opacity: 0.5;
+}
+
+.highlighted-input pre {
+  margin: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  margin-top: calc(0.25rem - 0.5px);
+  margin-left: calc(0.25rem - 0.25px);
+  margin-bottom: calc(0.25rem - 0.5px);
+  margin-right: calc(0.25rem - 0.25px);
+  white-space: pre-wrap;
+  width: calc(100% - .5rem);
+}
+
+.highlighted-input:has(input) pre {
+  white-space: pre;
+  overflow: hidden;
+}
+
+.highlighted-input textarea,
+.highlighted-input input {
+  margin: 0;
+  color: transparent;
+  caret-color: black;
+  white-space: pre-wrap;
+  width: calc(100% - .5rem);
+}
+
+.highlighted-input ::placeholder {
+  color: #0007;
+}
+
+.hljs-template-tag {
+  color: #aaa;
+}
+
+.hljs-template-variable {
+  background-color: #00000017;
+  color: #550;
+  border-radius: 0.25rem;
 }

@@ -32,6 +32,13 @@ from lead_gen.scheduling import Rules, Calendar
 router = APIRouter()
 
 
+@router.get("/test")
+async def test_template():
+    page = env.get_template("test.html.j2")
+    response = HTMLResponse(page.render())
+    return response
+
+
 @router.get("/projects/create")
 async def handle_get_project_create():
     page = env.get_template("projects-create.html.j2")
@@ -514,12 +521,10 @@ async def handle_get_project_sequence_steps_create(project_id: int, sequence_id:
     project = await Project.get(id=project_id).prefetch_related("flags")
     sequence = await Sequence.get(id=sequence_id, project=project).prefetch_related("steps")
 
-    default_days = len(sequence.steps) * 3
+    step_index = len(sequence.steps)
 
     page = env.get_template("steps-create.html.j2")
-    response = HTMLResponse(
-        page.render(project=project, sequence=sequence, default_days=default_days)
-    )
+    response = HTMLResponse(page.render(project=project, sequence=sequence, step_index=step_index))
     return response
 
 
@@ -528,6 +533,10 @@ class CreateStep(BaseModel):
     name: str
     subject: str
     content: str
+    transform_dedent: bool = Field(False, alias="transform-dedent")
+    transform_deduplicate_blank_lines: bool = Field(
+        False, alias="transform-deduplicate-blank-lines"
+    )
 
 
 @router.post("/projects/{project_id:int}/sequences/{sequence_id:int}/steps/create")
@@ -546,6 +555,8 @@ async def handle_post_project_sequence_steps_create(
         name=form.name,
         subject=form.subject,
         content=form.content,
+        transform_dedent=form.transform_dedent,
+        transform_deduplicate_blank_lines=form.transform_deduplicate_blank_lines,
     )
 
     return RedirectResponse(
@@ -584,6 +595,10 @@ class UpdateStep(BaseModel):
     name: str | None = None
     subject: str | None = None
     content: str | None = None
+    transform_dedent: bool = Field(False, alias="transform-dedent")
+    transform_deduplicate_blank_lines: bool = Field(
+        False, alias="transform-deduplicate-blank-lines"
+    )
     action: Literal["save", "delete", "move-up", "move-down"] = "save"
 
 
@@ -606,6 +621,10 @@ async def handle_post_project_sequence_steps(
                 step.subject = form.subject
             if form.content is not None:
                 step.content = form.content
+            if form.transform_dedent is not None:
+                step.transform_dedent = form.transform_dedent
+            if form.transform_deduplicate_blank_lines is not None:
+                step.transform_deduplicate_blank_lines = form.transform_deduplicate_blank_lines
             await step.save()
 
             return RedirectResponse(
@@ -848,11 +867,16 @@ async def handle_get_project_sequence_queue(project_id: int, sequence_id: int):
 
 @router.get("/projects/{project_id:int}/sequences/{sequence_id:int}/flows")
 async def handle_get_project_sequence_flows(project_id: int, sequence_id: int):
-    project = await Project.get(id=project_id).prefetch_related("leads__emails")
+    project = await Project.get(id=project_id).prefetch_related("leads")
     sequence = await Sequence.get(id=sequence_id, project=project)
 
+    leads = []
+    for lead in project.leads:
+        emails = await Email.filter(sequence=sequence, lead=lead).order_by("schedule")
+        leads.append((lead, emails))
+
     page = env.get_template("sequences-flows.html.j2")
-    response = HTMLResponse(page.render(project=project, sequence=sequence, leads=project.leads))
+    response = HTMLResponse(page.render(project=project, sequence=sequence, leads=leads))
     return response
 
 
@@ -861,7 +885,7 @@ async def handle_get_project_sequence_flow(project_id: int, sequence_id: int, le
     project = await Project.get(id=project_id)
     sequence = await Sequence.get(id=sequence_id, project=project)
     lead = await Lead.get(project=project, id=lead_id)
-    emails = await Email.filter(lead=lead).order_by("schedule")
+    emails = await Email.filter(lead=lead, sequence=sequence).order_by("schedule")
 
     page = env.get_template("sequences-flows-get.html.j2")
     response = HTMLResponse(

@@ -73,7 +73,7 @@ async def sending_task():
 
 async def receiving_task():
     while True:
-        accounts = await EmailAccount.all()
+        accounts = await EmailAccount.all().prefetch_related("sequences")
 
         for account in accounts:
             try:
@@ -115,9 +115,11 @@ async def receiving_task():
                     print("duplicate for", email["messageId"], "-", email["subject"])
                     continue
 
+                account.sequences
+
                 lead = await Lead.get_or_none(
                     person_email=email["fromAddress"],
-                    project__sequences__email_accounts=account,
+                    project_id__in=[s.project_id for s in account.sequences],
                 )
                 if lead is None:
                     print("No lead for", email["fromAddress"])
@@ -130,11 +132,12 @@ async def receiving_task():
                     continue
                 try:
                     original_email = await zoho.get_email(
-                    account.account_id, account.access_token, email["messageId"]
-                )
+                        account.account_id, account.access_token, email["messageId"]
+                    )
                 except Exception as e:
                     print(f"Could not get email: {e}")
                     continue
+
                 content = original_email.get_body(["plain", "html", "related"]).get_content()
 
                 try:
@@ -155,6 +158,7 @@ async def receiving_task():
 
                 except Exception as e:
                     print(f"Could not store incoming email: {e}")
+                    continue
 
                 try:
                     await lead.emails.filter(is_sent=False, kind=EmailKind.OUTGOING).update(
@@ -162,6 +166,7 @@ async def receiving_task():
                     )
                 except Exception as e:
                     print(f"Could not cancel future outgoing emails: {e}")
+                    continue
 
         await asyncio.sleep(30)
 

@@ -1,0 +1,55 @@
+{% extends "base.html.j2" %}
+{% block header %}
+  <style>
+  </style>
+{% endblock header %}
+{% block body %}
+  <div class="container">
+    <div class="highlighted-input container">
+      <input class="prewrap" /></input />
+        <pre class="prewrap"></pre>
+      </div>
+      <div class="highlighted-input container">
+        <textarea class="prewrap"></textarea>
+        <pre class="prewrap"></pre>
+      </div>
+    </div>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/django.min.js"
+    ></script>
+    <script type="module">
+        const highlightedInputs = document.querySelectorAll(".highlighted-input");
+        console.log(highlightedInputs);
+
+        for (const container of highlightedInputs) {
+            const input = container.querySelector("input, textarea");
+            const pre = container.getElementsByTagName("pre")[0];
+
+            function handleInput() {
+                const code = input.value;
+                const codeHighlighted = hljs.highlight(
+                    code, {
+                        language: "django"
+                    }
+                ).value;
+                pre.innerHTML = codeHighlighted;
+            }
+            function handleScroll() {
+                pre.scrollTop = input.scrollTop;
+                pre.scrollLeft = input.scrollLeft;
+            }
+
+            input.addEventListener("input", handleInput);
+            input.addEventListener("change", handleInput);
+            input.addEventListener("scroll", handleScroll);
+
+            handleInput();
+            handleScroll();
+        }
+    </script>
+    <script src="/static/js/textarea-autoresize.js"></script>
+{% endblock body %}

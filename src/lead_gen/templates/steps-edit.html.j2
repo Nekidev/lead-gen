@@ -20,6 +20,7 @@
       action="/projects/{{ project.id }}/sequences/{{ sequence.id }}/steps/{{ step.id }}"
       method="post"
       class="container"
+      id="form"
     >
       <div class="inline-input">
         <span>Send after</span>
@@ -44,35 +45,72 @@
           disabled
         {% endif %}
       />
-      <input
-        type="text"
-        name="subject"
-        placeholder="Email subject, empty to reply to last email"
-        value="{{ step.subject|forceescape }}"
-        {% if subject_error %}
-          class="error"
-        {% endif %}
-        {% if sequence.is_enabled %}
-          disabled
-        {% endif %}
-      />
+      <div class="highlighted-input">
+        <input
+          type="text"
+          name="subject"
+          {% if step.index == 0 %}
+            placeholder="Email subject"
+            required
+          {% else %}
+            placeholder="Email subject, empty to reply to last email"
+          {% endif %}
+          value="{{ step.subject|forceescape }}"
+          {% if subject_error %}
+            class="error"
+          {% endif %}
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        />
+        <pre></pre>
+      </div>
       {% if subject_error %}
         <div class="error">Email subject error: {{ subject_error }}</div>
       {% endif %}
-      <textarea
-        name="content"
-        placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
-        required
-        {% if content_error %}
-          class="error"
-        {% endif %}
-        {% if sequence.is_enabled %}
-          disabled
-        {% endif %}
-      >{{step.content}}</textarea>
+      <div class="highlighted-input">
+        <textarea
+          name="content"
+          placeholder="Hello {{ '{{lead.person_name}}' }},&#10;&#10;I'm writing to..."
+          required
+          {% if content_error %}
+            class="error"
+          {% endif %}
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+        >{{step.content}}</textarea>
+        <pre></pre>
+      </div>
       {% if content_error %}
         <div class="error">Email content error: {{ content_error }}</div>
       {% endif %}
+      <label class="pointer">
+        <input
+          type="checkbox"
+          name="transform-dedent"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+          {% if step.transform_dedent %}
+            checked
+          {% endif %}
+        />
+        Dedent (remove leading whitespaces)
+      </label>
+      <label class="pointer">
+        <input
+          type="checkbox"
+          name="transform-deduplicate-blank-lines"
+          {% if sequence.is_enabled %}
+            disabled
+          {% endif %}
+          {% if step.transform_deduplicate_blank_lines %}
+            checked
+          {% endif %}
+        />
+        Remove double blank lines
+      </label>
       <button
         name="action"
         value="save"
@@ -103,5 +141,6 @@
       </ol>
     </div>
   </div>
+  <script src="/static/js/highlight.js" type="module"></script>
   <script src="/static/js/textarea-autoresize.js" type="module"></script>
 {% endblock body %}

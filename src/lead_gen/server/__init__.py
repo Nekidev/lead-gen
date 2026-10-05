@@ -16,13 +16,20 @@ from lead_gen.server.projects import router as projects_router
 from lead_gen.server.connections import router as connections_router
 
 
+async def handle_error(task, name: str):
+    try:
+        await task
+    except Exception as e:
+        print(f"Task {name} exitted with an error: {e}")
+
+
 @asynccontextmanager
 async def context(app: FastAPI):
     async with TortoiseContext() as ctx:
         await ctx.init(config=CONFIG, _enable_global_fallback=True)
 
-        sending_task = asyncio.create_task(emailing.sending_task())
-        receiving_task = asyncio.create_task(emailing.receiving_task())
+        sending_task = asyncio.create_task(handle_error(emailing.sending_task(), "send"))
+        receiving_task = asyncio.create_task(handle_error(emailing.receiving_task(), "recv"))
 
         yield
 
