@@ -50,6 +50,8 @@ class Project(Model):
     flags: fields.BackwardFKRelation["Flag"]
     sequences: fields.BackwardFKRelation["Sequence"]
 
+    last_lead_tagged = fields.DateTimeField(null=True)
+
     created_at = fields.DateTimeField(auto_now_add=True)
     updated_at = fields.DateTimeField(auto_now=True)
 

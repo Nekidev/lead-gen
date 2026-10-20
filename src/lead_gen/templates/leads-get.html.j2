@@ -23,6 +23,14 @@
         name="person-email"
         value="{{ lead.person_email|forceescape }}"
       />
+      {% if lead.person_email %}
+        <a
+          href="mailto:{{ lead.person_email|forceescape }}"
+          class="text-xs"
+          target="_blank"
+          style="margin: -0.5rem 0;"
+        >Email them in a new tab</a>
+      {% endif %}
       <input
         type="text"
         placeholder="Person role"
@@ -43,6 +51,14 @@
         name="company-website"
         value="{{ lead.company_website|forceescape }}"
       />
+      {% if lead.company_website %}
+        <a
+          href="https://{{ lead.company_website|forceescape }}"
+          class="text-xs"
+          target="_blank"
+          style="margin: -0.5rem 0;"
+        >Open website in new tab</a>
+      {% endif %}
       <div class="gap"></div>
       <div class="divider">Flags</div>
       {% for flag in project.flags %}
@@ -61,6 +77,22 @@
       {% endfor %}
       <button name="action" value="save">Save lead</button>
       <button name="action" value="delete">DELETE LEAD</button>
+      <div class="button-row">
+        {% if prev %}
+          <a href="/projects/{{ project.id }}/leads/{{ prev.id }}">
+            <button type="button">Go to previous lead</button>
+          </a>
+        {% else %}
+          <button disabled>Go to previous lead</button>
+        {% endif %}
+        {% if next %}
+          <a href="/projects/{{ project.id }}/leads/{{ next.id }}">
+            <button type="button">Go to next lead</button>
+          </a>
+        {% else %}
+          <button disabled>Go to next lead</button>
+        {% endif %}
+      </div>
     </form>
   </div>
 {% endblock body %}

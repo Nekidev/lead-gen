@@ -199,8 +199,21 @@ async def handle_get_project_lead(project_id: int, lead_id: int):
     project = await Project.get(id=project_id).prefetch_related("flags")
     lead = await Lead.get(id=lead_id, project=project).prefetch_related("flags")
 
+    prev = (
+        await project.leads.filter(created_at__lt=lead.created_at)
+        .order_by("-created_at")
+        .prefetch_related("flags")
+        .first()
+    )
+    next = (
+        await project.leads.filter(created_at__gt=lead.created_at)
+        .order_by("created_at")
+        .prefetch_related("flags")
+        .first()
+    )
+
     page = env.get_template("leads-get.html.j2")
-    response = HTMLResponse(page.render(project=project, lead=lead))
+    response = HTMLResponse(page.render(project=project, lead=lead, prev=prev, next=next))
     return response
 
 

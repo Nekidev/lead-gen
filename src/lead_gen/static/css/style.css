@@ -269,6 +269,9 @@ input.error {
 .text-sm {
   font-size: 90%;
 }
+.text-xs {
+  font-size: 75%;
+}
 
 .text-secondary {
   /* color: #777; */
@@ -305,7 +308,7 @@ label:has(input:disabled) {
   margin-bottom: calc(0.25rem - 0.5px);
   margin-right: calc(0.25rem - 0.25px);
   white-space: pre-wrap;
-  width: calc(100% - .5rem);
+  width: calc(100% - 0.5rem);
 }
 
 .highlighted-input:has(input) pre {
@@ -319,7 +322,7 @@ label:has(input:disabled) {
   color: transparent;
   caret-color: black;
   white-space: pre-wrap;
-  width: calc(100% - .5rem);
+  width: calc(100% - 0.5rem);
 }
 
 .highlighted-input ::placeholder {
